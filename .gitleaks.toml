@@ -1,0 +1,16 @@
+# gitleaks 配置 — 扩展默认规则集 + 本仓 allowlist
+[extend]
+useDefault = true
+
+[allowlist]
+description = "占位符与合法署名, 非真密钥"
+regexes = [
+  # ccb.config.example 里的 <PROVIDER_API_KEY> 占位
+  '''<[A-Z_]+_API_KEY>''',
+  # 文档里的示例 ID 段
+  '''sk-xxx|sk-\.\.\.|<your-[a-z-]+>''',
+]
+paths = [
+  # 模板文件本就含占位 key=, 不是泄漏
+  '''orchestration/ccb/ccb\.config\.example''',
+]

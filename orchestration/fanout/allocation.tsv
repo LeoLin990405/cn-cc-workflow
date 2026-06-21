@@ -1,0 +1,15 @@
+# task-type<TAB>ranked-models(逗号, 第一=首选)  —— 源自 model_task_allocation_bench (2026-06-19 实测)
+# 给 fanout allocate / goal 自动分配用; 改这里即改默认分配策略。
+code	minimax,doubao,glm
+reasoning	kimi,mimo,doubao
+logic	kimi,mimo,doubao
+sql	doubao,glm,kimi
+chinese	kimi,stepfun,deepseek,glm
+docs	kimi,glm,deepseek
+format	deepseek,minimax,mimo
+json	deepseek,minimax,mimo
+longcontext	kimi
+math	stepfun,mimo
+frontend	agy
+review	coder
+fallback	mimo

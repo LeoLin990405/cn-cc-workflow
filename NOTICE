@@ -1,0 +1,29 @@
+cn-cc-workflow
+Copyright 2026 LeoLin990405
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+---
+
+Attributions
+
+- The `orchestration/cn-plugin/` plugin architecture (commands, agents,
+  skills, companion scripts) is derived from and inspired by
+  openai/codex-plugin-cc (https://github.com/openai/codex-plugin-cc),
+  the Codex plugin for Claude Code by OpenAI, licensed under Apache-2.0.
+
+- The Phase 5 "Review-Fix Loop" design in `orchestration/fanout/SKILL.md`
+  draws on published work on agentic verification loops:
+    - Tim Williams, "LLM Verification Loops: Best Practices and Patterns"
+    - "Loop Engineering: Why the Best AI Agents in 2026 Are Built as Loops"
+    - Reflexion / Self-Refine (academic literature)

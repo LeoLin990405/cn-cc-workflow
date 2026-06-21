@@ -1,0 +1,41 @@
+name: Bug 报告
+description: 启动器 / 编排 / 同步出问题了
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **不要在这里贴 API key / token / 完整 `ccb.config`**。贴日志前先打码。
+  - type: input
+    id: component
+    attributes:
+      label: 出问题的组件
+      placeholder: backends/cc-glm · fanout · ccb · cc-sync · cn-plugin
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 现象
+      description: 期望 vs 实际
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 跑 `cc-glm ...`
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: 环境
+      placeholder: macOS/Linux 版本 · node 版本 · claude-code 版本 · provider
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志（已打码）
+      render: shell

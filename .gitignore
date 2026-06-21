@@ -1,0 +1,22 @@
+# ── secrets — 绝不进仓 ────────────────────────────────
+**/.ccb/ccb.config        # 真 key 的 ccb 配置 (只跟踪 ccb.config.example)
+*secrets*.env
+cc-model-secrets.env
+.env
+.env.*
+
+# ── 运行态 / 缓存 ─────────────────────────────────────
+node_modules/
+.claude-envs/*/opt/
+.fanout-cache/        # fan-out 结果缓存 (运行态, 每轮 round-N/)
+*.log
+.DS_Store
+
+# ── ccb 运行态 ────────────────────────────────────────
+.ccb/state/
+.ccb/*.sock
+.ccb/logs/
+
+# ── 任务 / 报告产物 ───────────────────────────────────
+tasks/*.local.md
+reports/

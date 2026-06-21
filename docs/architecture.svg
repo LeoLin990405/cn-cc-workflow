@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 570" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="13">
+  <rect x="1" y="1" width="778" height="568" rx="14" fill="#fbfcfd" stroke="#d0d7de"/>
+  <text x="390" y="34" text-anchor="middle" font-size="18" font-weight="700" fill="#1f2328">cn-cc-workflow — architecture</text>
+  <text x="390" y="54" text-anchor="middle" font-size="12" fill="#656d76">Planner · Implementers · Frontend · Reviewer + bounded review-fix loop</text>
+
+  <!-- Planner -->
+  <rect x="285" y="74" width="210" height="48" rx="9" fill="#dbeafe" stroke="#2563eb"/>
+  <text x="390" y="94" text-anchor="middle" font-weight="700" fill="#1e3a8a">Planner — Claude</text>
+  <text x="390" y="111" text-anchor="middle" font-size="11" fill="#1e40af">plan · split · decide · integrate · patch</text>
+
+  <line x1="390" y1="122" x2="390" y2="150" stroke="#8c959f" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="398" y="140" font-size="10.5" fill="#656d76">ccb ask · TASK file</text>
+
+  <!-- Executor -->
+  <rect x="240" y="152" width="300" height="50" rx="9" fill="#eef1f4" stroke="#57606a"/>
+  <text x="390" y="172" text-anchor="middle" font-weight="700" fill="#24292f">Executor — fanout skill (5 phases)</text>
+  <text x="390" y="189" text-anchor="middle" font-size="11" fill="#57606a">preflight · dispatch · integrate · review · loop</text>
+
+  <!-- arrows: executor -> implementers / frontend / reviewer -->
+  <path d="M310 202 C190 226, 168 236, 168 260" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#g)"/>
+  <text x="120" y="230" font-size="10.5" fill="#15803d">dispatch</text>
+  <line x1="390" y1="202" x2="390" y2="260" stroke="#9aa1a9" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#m)"/>
+  <text x="398" y="232" font-size="10" fill="#8c959f">frontend (opt-in)</text>
+  <path d="M470 202 C590 226, 612 236, 612 260" fill="none" stroke="#ea580c" stroke-width="1.5" marker-end="url(#o)"/>
+  <text x="588" y="230" font-size="10.5" fill="#c2410c">ccb ask coder</text>
+
+  <!-- Implementers -->
+  <rect x="48" y="262" width="240" height="90" rx="9" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="168" y="283" text-anchor="middle" font-weight="700" fill="#166534">Implementers — 9 Chinese LLMs</text>
+  <text x="168" y="301" text-anchor="middle" font-size="10.5" fill="#15803d">deepseek · glm · kimi · qwen · doubao</text>
+  <text x="168" y="316" text-anchor="middle" font-size="10.5" fill="#15803d">minimax · mimo · stepfun · longcat</text>
+  <text x="168" y="334" text-anchor="middle" font-size="10.5" fill="#15803d">via ccb · each in isolated worktree</text>
+
+  <!-- Frontend (agy) — opt-in, dashed -->
+  <rect x="306" y="262" width="158" height="90" rx="9" fill="#fef9f3" stroke="#b08968" stroke-dasharray="5 4"/>
+  <text x="385" y="282" text-anchor="middle" font-weight="700" fill="#8a5a2b">Frontend (opt-in)</text>
+  <text x="385" y="300" text-anchor="middle" font-size="10.5" fill="#9a6a3a">agy · Antigravity</text>
+  <text x="385" y="315" text-anchor="middle" font-size="10.5" fill="#9a6a3a">manual / agy --print</text>
+  <text x="385" y="333" text-anchor="middle" font-size="9.5" fill="#b45309">frontend-only · never reviews</text>
+  <text x="385" y="346" text-anchor="middle" font-size="9.5" fill="#b45309">(backend = Gemini → off review path)</text>
+
+  <!-- Reviewer -->
+  <rect x="484" y="262" width="244" height="90" rx="9" fill="#ffedd5" stroke="#ea580c"/>
+  <text x="606" y="285" text-anchor="middle" font-weight="700" fill="#9a3412">Reviewer — Codex</text>
+  <text x="606" y="304" text-anchor="middle" font-size="10.5" fill="#c2410c">independent frontier model</text>
+  <text x="606" y="321" text-anchor="middle" font-size="10.5" fill="#c2410c">VERDICT: ACCEPTED / NEEDS FIX</text>
+  <text x="606" y="338" text-anchor="middle" font-size="10.5" fill="#c2410c">generation ≠ review</text>
+
+  <!-- cache / barrier -->
+  <rect x="48" y="366" width="240" height="40" rx="9" fill="#f3e8ff" stroke="#9333ea"/>
+  <text x="168" y="384" text-anchor="middle" font-weight="600" fill="#6b21a8">cache + fan-in barrier</text>
+  <text x="168" y="399" text-anchor="middle" font-size="10.5" fill="#7e22ce">dispatch N ⇒ return N before next round</text>
+
+  <!-- Phase 5 loop: reviewer -> implementers (passes below frontend) -->
+  <path d="M484 396 C370 442, 300 440, 270 410" fill="none" stroke="#dc2626" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#r)"/>
+  <text x="372" y="458" text-anchor="middle" font-size="11" fill="#b91c1c" font-weight="600">Phase 5 review-fix loop (bounded · keep-best · meta-reflect)</text>
+  <text x="606" y="384" text-anchor="middle" font-size="10.5" fill="#9a3412">NEEDS FIX → operator patches</text>
+
+  <!-- maintenance -->
+  <rect x="120" y="478" width="540" height="38" rx="9" fill="#f6f8fa" stroke="#afb8c1"/>
+  <text x="390" y="496" text-anchor="middle" font-weight="600" fill="#424a53">maintenance (launchd, off the request path)</text>
+  <text x="390" y="510" text-anchor="middle" font-size="10.5" fill="#656d76">cc-sync — follow Claude Code + model updates   ·   ccb-sync — adapt after ccb updates</text>
+
+  <text x="390" y="544" text-anchor="middle" font-size="10.5" fill="#8c959f">main branch = single source of truth · keys only in ~/.config/cc-model-secrets.env · no Gemini in the review path</text>
+
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto"><path d="M0,0 L7,3.2 L0,6.4 z" fill="#8c959f"/></marker>
+    <marker id="g" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto"><path d="M0,0 L7,3.2 L0,6.4 z" fill="#16a34a"/></marker>
+    <marker id="m" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto"><path d="M0,0 L7,3.2 L0,6.4 z" fill="#9aa1a9"/></marker>
+    <marker id="o" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto"><path d="M0,0 L7,3.2 L0,6.4 z" fill="#ea580c"/></marker>
+    <marker id="r" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto"><path d="M0,0 L7,3.2 L0,6.4 z" fill="#dc2626"/></marker>
+  </defs>
+</svg>

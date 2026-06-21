@@ -1,0 +1,17 @@
+# 统一行尾, 防跨平台 CRLF 污染脚本
+* text=auto eol=lf
+
+*.sh        text eol=lf
+*-code      text eol=lf
+*.mjs       text eol=lf
+*.tsv       text eol=lf
+Makefile    text eol=lf
+
+# 语言统计: 启动器算 Shell
+*-code linguist-language=Shell
+backends/bin/cc-models linguist-language=Shell
+backends/bin/cc-sync   linguist-language=Shell
+
+# 文档不计入语言统计
+docs/**     linguist-documentation
+*.md        linguist-documentation

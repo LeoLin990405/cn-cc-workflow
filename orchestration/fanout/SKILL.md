@@ -1,0 +1,297 @@
+---
+name: fanout
+description: Use this skill for a multi-agent collaborative coding task. Triggers (中/英)：「/fanout」·「走 fanout 流程」·「用 fanout 做 X」·「用 cc 分身 + codex 写 Y」·「多 agent 协作做 Z」·「前后端 + review 做 W」·「拆给多个 agent 并行」·"fan out X" · "use the model fleet + a reviewer to build Y" · "split this across multiple agents" · "frontend + backend + review". Use whenever a request benefits from 2+ ccb agents (implementer backends + an independent reviewer). Implements a Planner / Implementers / Reviewer matrix: Planner = your strategic layer (e.g. Claude Desktop), Backend Implementers = the ccb model fleet (Claude + the Chinese-model 分身 deepseek/glm/kimi/minimax/mimo/stepfun/doubao/ark-auto), Reviewer/Judge = an independent frontier model (e.g. Codex). Auto-creates a TASK file, dispatches via `ccb ask`, integrates via git worktree cherry-pick to the main branch, runs reviewer with a VERDICT, then a bounded review-fix loop (NEEDS FIX → operator patches → re-review, capped then escalate; never loops forever / never hard-marks DONE). Always uses each provider's latest model.
+metadata:
+  short-description: Multi-agent fan-out (Planner / Implementers / Reviewer)
+---
+
+# Fan-out — multi-agent coding workflow
+
+Invoke when the request is **"build X via fan-out" / "use the fleet to write Y" / "multi-agent collaboration" / "code + tests + review"**.
+
+Three roles, five phases. Planner orchestrates, the implementer fleet writes code in isolated worktrees, an independent reviewer is the quality gate, and a bounded loop drives fixes to acceptance. The single source of truth is the **main branch**; each implementer works in a worktree sandbox and the integrator cherry-picks only reviewed changes back.
+
+> Conventions used below — adapt to your setup:
+> - `$CCB_WORK` = your ccb project root for the fleet (where `.ccb/ccb.config` lives). See `orchestration/ccb/ccb.config.example`.
+> - `$CCB_CLAUDE` = an optional second ccb project pinned to the Claude backend (OAuth/keychain), if you run `cc-claude` separately.
+> - `$TASKS` = where you keep task files (e.g. `~/.claude/tasks/`).
+
+---
+
+## Roles
+
+| Role | Agent | Call |
+|---|---|---|
+| **Planner / Integrator / Fixer** | You (your strategic layer — e.g. Claude Desktop) | Direct shell + `ccb ask` to dispatch; **not itself in a ccb pane** |
+| **Backend Implementers** (auto fan-out) | `cc-claude` (Claude, in `$CCB_CLAUDE`) + the Chinese-model 分身 `cc-deepseek` `cc-glm` `cc-kimi` `cc-minimax` `cc-mimo` `cc-stepfun` `cc-doubao` `cc-ark-auto` (in `$CCB_WORK`) | `ccb ask cc-X --compact <<EOF ... EOF` |
+| **Frontend Implementer** (opt-in) | **Antigravity (`agy` CLI)** | manual in the IDE, or headless `agy --print "<prompt>"`; commit/paste output, integrator merges. **Frontend-only — never reviews** (backend = Gemini, must stay off the review path) |
+| **Reviewer / Final Judge** | `coder` (an independent frontier model, e.g. Codex, in `$CCB_WORK`) | `ccb ask coder --compact` → VERDICT: ACCEPTED or NEEDS FIX |
+
+> Generation ≠ review: implementers and the reviewer must be **different model families** (research shows ~+20% over self-review).
+
+---
+
+## 5-phase workflow (follow strictly)
+
+> Plan → Dispatch → Integrate → Review → **Review-Fix Loop** (NEEDS FIX iterates to ACCEPTED, bounded then escalate)
+
+**Higher-level entry points** (optional, layered on the 5 phases):
+- **Goal mode** — declarative target with a deterministic gate: `"$FO" goal template` → fill `outcome/gate/rubric/rounds` → `"$FO" goal check <spec>` runs the gate (the loop drives to it). 目标达成 = gate 0 + reviewer ACCEPTED.
+- **Planning panel** — multi-model decomposition: `"$FO" plan "<goal>" --models cc-deepseek,cc-kimi,coder` fans the "拆解 goal" out to several models (each Writes its plan); you synthesize them into Phase 1.
+- **Allocation** — `"$FO" allocate <task-type> --top` → bench-recommended model (code→minimax, logic→kimi…); drives who gets which subtask in Phase 1.
+- **Workspace 隔离**（借鉴 Zleap-Agent）— `"$FO" workspace context <ws>` 按工位组装分层 context（System + Workspace + Tools + Memory + History）；`"$FO" dispatch <agent> --workspace <ws> ...` 前缀注入，让(弱)模型只看该工位该看的，不被全量 context 淹没。工位: main/code/sql/chinese/review/web。
+
+### Phase 1: Plan
+
+> Tooling: `FO=orchestration/fanout/fanout` — unified driver: `doctor` `preflight` `task` `template` `dispatch` `cache` `allocate` `workspace` `plan` `goal` `summary` `ccb-sync` `selftest`.
+
+0. **Decide the mode** — small/focused task (1–2 files, one fix)? Skip the fleet: implement directly + Codex review (the high-value generation≠review gate). Fan-out-shaped (≥3–4 parallel subtasks / bulk / cost-sensitive)? Bring up the fleet:
+   ```bash
+   "$FO" fleet status      # ready? (no tmux server / panes down = stuck-in-queue risk)
+   "$FO" fleet up          # strips CLAUDE_CODE_* (OAuth false-401) + starts panes in detached tmux
+   ```
+1. **Preflight (go/no-go gate)** — deps / ccbd alive / ccb.config sanity + the **no-Gemini guard**, all as code:
+   ```bash
+   CCB_WORK=<ccb project> "$FO" preflight   # NO-GO → 修好再派活 (ccbd down → fleet up)
+   ```
+   `"$FO" doctor` shows the full environment + recommendation. **Never dispatch when preflight is NO-GO** — that's how tasks get stuck in an empty queue.
+
+2. **Scaffold the TASK file** — don't hand-write boilerplate: `F=$("$FO" task new "<title>" P1)` → `$TASKS/TASK-{date}-{NNN}.md`; `"$FO" task log "$F" "<note>"` to append, `"$FO" task done "$F"` to close. Structure:
+   ```markdown
+   # TASK-{date}-{n}: {title}
+   Status: IN_PROGRESS
+   Priority: P0 | P1 | P2
+   Created: {time}
+   Completed: -
+
+   ## Requirements
+   ...
+
+   ## Subtasks
+   - [ ] Task 1 — <scope> (Implementer: cc-doubao, file: src/foo.py)
+   - [ ] Task 2 — <scope> (Implementer: cc-deepseek, file: tests/test_foo.py)
+   - [ ] Task 3 — <scope> (Implementer: cc-claude, file: src/bar.py)
+   - [ ] Final Review (Reviewer: coder)
+
+   ## Output files
+   - src/foo.py
+   - src/bar.py
+   - tests/test_foo.py
+
+   ## Matrix
+   | Task | Implementer | Reviewer | Fixer |
+   |---|---|---|---|
+   | 1 | cc-doubao | coder | operator Edit patch |
+   | 2 | cc-deepseek | coder | operator Edit patch |
+   | 3 | cc-claude | coder | operator Edit patch |
+   | Final | — | coder | operator Edit patch |
+
+   ## Log
+   (append in real time)
+   ```
+
+3. **File-level split** — each agent edits *different* files to avoid worktree conflicts. If the same file must change, **serialize** (A done → cherry-pick → B continues), never concurrently.
+
+### Phase 2: Dispatch + cache + fan-in barrier (parallel `ccb ask`)
+
+**① Open the round cache** — declare the N tasks this round dispatches (the fan-out manifest), so the fan-in barrier can later require all N back. `CACHE=orchestration/fanout/fanout-cache.sh`:
+
+```bash
+ROUND=1   # bump per round (including each Phase 5 loop round)
+"$CACHE" init "$ROUND" t1:cc-deepseek t2:cc-glm t3:agy   # task_id:agent ...
+```
+
+**② Dispatch** each subtask. `"$FO" dispatch <agent> --template impl --set ROLE=.. --set SCOPE=.. --set FILES=.. [--task "$F"]` wraps template-render + `ccb ask` + TASK-log (templates: `impl`/`analysis`/`review`); or hand-write the `ccb ask` with a prompt that **mandates worktree edits to real files**:
+
+```bash
+ccb ask <agent> --compact <<EOF
+Your role: <role>, working inside a git worktree (cwd is already the worktree).
+
+Task: <scope description>
+
+Hard requirements:
+1. **Use Read/Edit/Write tools to actually modify files** — do not just print code blocks in chat
+2. Files in scope: <list> (do not touch others)
+3. When done, print one line "DONE: <list-of-files>"
+4. If a requirement is unclear, make a reasonable call — don't ask back
+
+If you only print code in chat, integration cannot pick it up and the task fails.
+EOF
+```
+
+For **review/analysis (non-coding) tasks**, the prompt must order the agent to **Write the artifact to a file**, never chat-only — `ccb ask` is async and concurrent scrollback can overwrite chat output, losing it permanently. Template:
+
+```bash
+ccb ask <agent> --compact <<EOF
+Your role: <role>
+Task: <review/analysis scope>
+Input files: <list> (Read them)
+Output: **Write to /tmp/<task-dir>/<artifact>.md with the Write tool** (NOT chat — chat gets truncated/lost)
+Output schema:
+  <structured fields, e.g. VERDICT / Confidence / Findings (file:line)>
+Hard: 1. Read inputs; 2. Write the output file; 3. no chat output
+EOF
+```
+
+- Backend implementers (the 分身 + `coder`) live in `$CCB_WORK`; `cc-claude` in `$CCB_CLAUDE`.
+- Frontend / UI work (if any) goes to **Antigravity (`agy`)** — either manual in the IDE, or headless:
+  ```bash
+  agy --print --print-timeout 5m "<frontend task prompt>"   # add --dangerously-skip-permissions only in a sandbox
+  ```
+  Commit/paste its output; the integrator merges to main. **`agy` is frontend-implement only — never in the Phase 5 review-fix loop, never the reviewer** (its backend is Gemini; the review path must stay a different model family).
+
+Dispatch is **fire-and-forget** (don't block chat).
+
+**③ Cache every return** — every agent's artifact goes into the cache *first* (durable; not read from ephemeral chat/scrollback). As each task finishes, the operator records it under its task id:
+
+```bash
+"$CACHE" put  "$ROUND" t1 /tmp/<task-dir>/t1.md   # success → cached + marked done
+"$CACHE" fail "$ROUND" t3 "agy timed out"          # died/timed out → still counts as "returned"
+```
+
+**④ Fan-in barrier (HARD GATE)** — dispatched N ⇒ must collect N back before advancing. The round does **not** proceed to Integrate on partial results:
+
+```bash
+"$CACHE" barrier "$ROUND" --wait 600   # exit 0 ONLY when all N are terminal (done|fail)
+```
+
+The barrier passes only when **every dispatched task has returned** (`done` or `fail`); a stuck task that never returns is surfaced here (`status`/`list`), never silently dropped. This gate applies to **every round**, including each Phase 5 loop round.
+
+### Phase 3: Integrate (operator = Integrator)
+
+Only after the **fan-in barrier passes** (all N returned). `"$FO" summary "$ROUND" --task "$F"` logs a round summary (per-task status). Read cached artifacts via `"$CACHE" collect "$ROUND"`, then cherry-pick each worktree's changes onto main:
+
+```bash
+# cherry-pick each worktree's changes onto the main branch
+for ag in <list-of-active-agents>; do
+  cd "$CCB_WORK/.ccb/workspaces/$ag"          # or $CCB_CLAUDE/.ccb/workspaces/cc-claude
+  git add -A
+  if [ -n "$(git status --porcelain)" ]; then
+    git -c user.email=ccb@local -c user.name=$ag commit -q -m "$ag: <subtask summary>"
+    SHA=$(git rev-parse HEAD)
+    cd "$CCB_WORK"
+    git cherry-pick $SHA || { echo "conflict — resolve manually"; break; }
+  fi
+done
+
+# run local sanity tests
+pytest tests/ -q   # or the project's own test command
+```
+
+**Append to the TASK log** after each cherry-pick + sanity result.
+
+### Phase 4: Review (coder = independent reviewer)
+
+```bash
+cd "$CCB_WORK"
+DIFF=$(git diff main...HEAD)
+ccb ask coder --compact <<EOF
+Your role: independent reviewer, the final quality gate.
+
+Review the integrated change (git diff main...HEAD):
+\`\`\`
+$DIFF
+\`\`\`
+
+Focus: correctness / security / perf / test coverage
+List only real problems; if none, output VERDICT: ACCEPTED
+If problems exist, output VERDICT: NEEDS FIX plus a problem list
+Be concise.
+EOF
+```
+
+- `VERDICT: ACCEPTED` → wrap up (TASK → Status: DONE + Completed, push / deliver).
+- `VERDICT: NEEDS FIX` → enter **Phase 5 review-fix loop**.
+
+### Phase 5: Review-Fix Loop (bounded · loop engineering v2)
+
+**Research basis** (Self-Refine / Reflexion / 2026 loop-engineering — see sources):
+- Rounds 1-2 capture **~75%** of reachable improvement; **hard-cap at 5-6 rounds** to avoid oscillation (the model "fixes" things that weren't broken).
+- Generation ≠ review (two agents) beats self-review by **~20%** — fan-out satisfies this natively (implementer ≠ reviewer).
+- **Deterministic gate first**: run build/test/lint (objective pass/fail) before the subjective review; the gate must be trustworthy (weak tests just ship bad code faster).
+- **Incremental review**: from round 2, review only the round's diff (cheaper + focused).
+- **Keep-best**: retain the best version across rounds; revert if a round regresses (guards against degeneration of thought).
+- **At least 2 review passes**: even a first ACCEPTED gets one independent confirmation (verification is probabilistic).
+- **Non-convergence → meta-reflect, then escalate** — don't keep retrying blindly.
+
+```
+MAX_ROUNDS=3                       # cost cap (research ceiling 5-6; rounds 1-2 already do the bulk). Over → escalate
+BEST=$(git rev-parse HEAD); BEST_N=<prev Findings count>     # keep-best baseline
+round=1
+while round <= MAX_ROUNDS:
+  # 1) deterministic gate (objective, before subjective review) — build + test + lint
+  PREV=$(git rev-parse HEAD)
+  run build/test/lint; red → go straight to (5) fix (don't waste the reviewer this round)
+  # 2) reviewer pass (incremental: from round 2 only send this round's diff)
+  VERDICT, FINDINGS = ccb ask coder(this round's diff)
+  # 3) keep-best — if this round is worse than BEST / introduced new issues → git reset to BEST, log "oscillation"
+  if FINDINGS worse than BEST_N or new class of issue: git reset --hard $BEST
+  else: BEST=$(git rev-parse HEAD); BEST_N=len(FINDINGS)
+  # 4) exit check
+  if VERDICT == ACCEPTED:
+     if first ACCEPTED: run 1 independent confirmation pass; still ACCEPTED → wrap up DONE; else continue
+  # 5) Fix (operator Edit patch, NOT re-dispatch to implementer) + log this round to the TASK file
+  fix each Finding + commit
+  TASK append: "## Loop Round {round} — gate:<pass/fail> fixed:<summary> verdict:<…>"
+  if same class of Findings 2 rounds running (non-convergence): break  # → meta-reflect
+  round++
+```
+
+**Three exit states (must reach exactly one; never hard-mark DONE)**:
+1. `ACCEPTED` (after the 2nd independent confirmation) → wrap up DONE.
+2. `round > MAX_ROUNDS` still NEEDS FIX → **stop, escalate** (post the best-version diff + remaining Findings + your judgment).
+3. **Non-convergence** → **Meta-Reflector**: first reflect on *why it won't converge* (reviewer too strict? requirement unclear? wrong approach to swap? fix→break→fix thrash?), output a diagnosis + recommendation (different implementation, re-split subtasks, refocus the reviewer), **then** escalate — not a blind retry.
+
+> sources: [LLM Verification Loops (Williams)](https://timjwilliams.medium.com/llm-verification-loops-best-practices-and-patterns-07541c854fd8) · [Loop Engineering 2026 (Shaam)](https://shaam.blog/articles/loop-engineering-ai-agents) · Reflexion / Self-Refine
+
+---
+
+## Models — always latest
+
+The fleet's models are pinned in `.ccb/ccb.config` (see `orchestration/ccb/ccb.config.example`) and in `backends/bin/cc-model-registry.tsv`. Change models there, not in this skill. The Volcengine Ark "Coding Plan" aggregation layer (`cc-doubao` / `cc-ark-auto` share one ARK key) lets the console switch among `ark-code-latest` / `doubao-seed-code` / `deepseek-v4` / `kimi` / `glm` / `minimax` — endpoint `/api/coding` (**not** `/api/v3`). Re-verify each provider's listing endpoint periodically; the auto-refresh is handled by `backends/bin/cc-sync`.
+
+---
+
+## Choosing an implementer
+
+| Subtask type | Preferred implementer |
+|---|---|
+| Frontier reasoning + coding | `cc-claude` |
+| Reasoning + complex algorithms | `cc-deepseek` |
+| Chinese docs / docstrings | `cc-glm` |
+| Long context (>50K) | `cc-kimi` |
+| Math / step-by-step thinking | `cc-stepfun` / `cc-minimax` |
+| Volcengine ecosystem | `cc-doubao` |
+| General coding / fallback | `cc-mimo` / `cc-ark-auto` |
+| Frontend / UI / visual | `agy` (Antigravity — manual or `agy --print`) |
+| Final review / verdict | `coder` |
+
+**Do not override the model in `ccb ask`** — the model is fixed per agent in `ccb.config`; select by *agent*, not by model.
+
+---
+
+## Design principles (hard rules)
+
+- **TASK file is mandatory** — never dispatch without one; it's the audit trail.
+- **Cache-first + fan-in barrier** — every agent result is cached durably *before* use (never read from ephemeral chat); a round that dispatched N must collect N back (`fanout-cache barrier` exits 0) before advancing. Applies to every round, including Phase 5 loop rounds.
+- **One independent prompt per agent** — never broadcast one prompt to N agents.
+- **NEEDS FIX → operator patches** (Edit), never re-dispatch the implementer to rewrite.
+- **Latest model always**; ground truth is `ccb.config`, not strings in this skill.
+- **`ccb ask` is the only sanctioned dispatch channel** — don't spawn sub-agents by other means.
+- **Second opinions go to `coder` or another fleet 分身**, never to an excluded provider.
+- **Implementers must Write artifacts to files**, never chat-only (async output is lossy).
+
+---
+
+## Anti-patterns (DON'T)
+
+- ❌ Using fan-out for a single simple Q&A — overkill; just `ccb ask` directly, no TASK file.
+- ❌ Dispatching without a TASK file.
+- ❌ Broadcasting one prompt to N agents.
+- ❌ Re-dispatching the implementer after NEEDS FIX — operator must Edit-patch.
+- ❌ Overriding the model in `ccb ask`.
+- ❌ Concurrent edits to the same file — split by file or serialize.
+- ❌ Letting an implementer output chat-only (no Write) — async truncation + scrollback overwrite loses the artifact; write to `/tmp/<task-dir>/<file>.md`.
+- ❌ Trusting `ccb ask get`'s reply field for completion — it's turn metadata, not the artifact; verify by reading the file the agent wrote.
+- ❌ Routing review / second-opinion to `agy` (Antigravity) — its backend is Gemini; keep the reviewer a different family (`coder`). `agy` is **frontend-implement only**, and stays out of the Phase 5 loop.
+- ❌ Advancing to Integrate or the next round on **partial fan-in** — if N tasks were dispatched, all N must be cached back (barrier exits 0) first. Never proceed with 5/8 results.

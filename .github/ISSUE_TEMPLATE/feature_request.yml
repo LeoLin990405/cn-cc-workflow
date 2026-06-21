@@ -1,0 +1,23 @@
+name: 功能 / 新 provider 请求
+description: 加 provider、扩展编排、改进 loop 等
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 想解决什么
+      description: 现在缺了什么 / 哪里别扭
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 设想方案
+      placeholder: |
+        新 provider 请给：Anthropic 兼容 base_url + 模型 ID + 官方文档链接
+    validations:
+      required: true
+  - type: textarea
+    id: alts
+    attributes:
+      label: 备选 / 已试过的办法

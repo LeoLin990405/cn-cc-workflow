@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Custom secret gate (placeholder + fingerprint)
+        run: bash scripts/scan-secrets.sh
+      - name: gitleaks (full history)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
+
+  shell:
+    name: Shell syntax + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure shellcheck (preinstalled on ubuntu-latest; binary fallback)
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            SC_VER=0.10.0
+            curl -sSL "https://github.com/koalaman/shellcheck/releases/download/v${SC_VER}/shellcheck-v${SC_VER}.linux.x86_64.tar.xz" | tar -xJ
+            sudo install "shellcheck-v${SC_VER}/shellcheck" /usr/local/bin/shellcheck
+          fi
+          shellcheck --version
+      - name: bash -n + shellcheck
+        run: bash scripts/check-shell.sh
+
+  node:
+    name: Plugin tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: npm test
+        run: npm test

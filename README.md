@@ -1,0 +1,243 @@
+# cn-cc-workflow
+
+[![CI](https://github.com/LeoLin990405/cn-cc-workflow/actions/workflows/ci.yml/badge.svg)](https://github.com/LeoLin990405/cn-cc-workflow/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A518.18-339933.svg)](package.json)
+[![Tests](https://img.shields.io/badge/tests-119%20passing-success.svg)](orchestration/fanout)
+
+**English | [简体中文](README_ZH.md)**
+
+> A multi-agent coding workflow that drives a fleet of **9 Chinese LLMs** (each running as an isolated Claude Code instance) as the implementers, an independent frontier model (Codex) as the quality gate, and a **bounded review-fix loop** that converges to acceptance — never looping forever, never hard-marking done.
+
+Cheap, fast Chinese models do the work; a different-family reviewer judges it; the orchestrator (Claude) plans, integrates, and patches. A fan-out/fan-in cache guarantees every dispatched task returns before the next round, and per-task **workspace isolation** keeps weaker models from drowning in context.
+
+---
+
+## Table of Contents
+
+- [Why](#why)
+- [Architecture](#architecture)
+- [Repository layout](#repository-layout)
+- [Quick start](#quick-start)
+- [Install as a Claude Code Skill](#install-as-a-claude-code-skill)
+- [The `fanout` CLI](#the-fanout-cli)
+- [Workflow](#workflow)
+- [Design principles](#design-principles)
+- [Development](#development)
+- [Security](#security)
+- [Acknowledgements](#acknowledgements)
+- [License](#license)
+
+---
+
+## Why
+
+Small / cheap models fail when an agent shows them *every* tool, memory, rule and message on every step — latency and attention are wasted, and the model makes mistakes (an empirical [model benchmark](orchestration/fanout/allocation.tsv) in this repo shows exactly which models break on which task types). This project addresses that with **harness engineering**, not bigger models:
+
+- **Cross-family separation** — implementers (Chinese models) ≠ reviewer (Codex). Generation ≠ review beats self-review by ~20%.
+- **Bounded self-correction** — a review-fix loop with deterministic gate, keep-best, and meta-reflection on non-convergence (informed by Self-Refine / Reflexion / loop-engineering research).
+- **Context isolation** — each task runs in a *workspace* that exposes only the prompt, tools, memory and model it needs.
+- **Completeness guarantee** — a fan-in barrier: N tasks dispatched ⇒ N must return before the round advances.
+
+---
+
+## Architecture
+
+<img src="docs/architecture.svg" alt="cn-cc-workflow architecture" width="760">
+
+<details>
+<summary>Text diagram</summary>
+
+```
+                  ┌─────────────────────────────────────────────┐
+   Planner         │  Claude (Desktop or Claude Code)            │  plan · split · decide · integrate
+                  └───────────────┬─────────────────────────────┘
+                                  │  ccb ask  (TASK file → ~/.claude/tasks/)
+                  ┌───────────────▼─────────────────────────────┐
+   Executor       │  Claude Code  =  fanout skill (5 phases)      │  dispatch · quality gate · loop
+                  └──┬──────────────────────┬───────────────┬────┘
+                     │ ccb dispatch         │               │ ccb ask coder
+        ┌────────────▼───────────┐   ┌──────▼──────┐   ┌─────▼─────────┐
+ Impl.  │ 9 Chinese CC backends   │   │ shared git   │   │ Codex (gpt-5.5)│ Reviewer
+        │ deepseek/glm/kimi/qwen │   │ worktrees    │   │ = quality gate │
+        │ doubao/minimax/mimo/   │   │ (main =      │   └─────┬─────────┘
+        │ stepfun/longcat        │   │  truth)      │         │ VERDICT
+        └────────────┬───────────┘   └──────┬──────┘         │
+                     └────────► Phase 5: Review-Fix Loop ◄────┘
+                          (gate → review → keep-best → fix, bounded)
+```
+
+</details>
+
+| Role | Who | Responsibility |
+|---|---|---|
+| **Planner / Integrator / Fixer** | Claude (Desktop or Claude Code) | Plans, splits tasks, integrates, patches, holds the final operational decision |
+| **Implementers** | 9 Chinese models via [ccb](https://github.com/SeemSeam/claude_codex_bridge) (`cc-deepseek` `cc-glm` `cc-kimi` `cc-qwen` `cc-doubao` `cc-minimax` `cc-mimo` `cc-stepfun` `cc-longcat`) + `cc-claude` | Write code in isolated worktrees |
+| **Frontend** (opt-in) | Antigravity (`agy` CLI) | Frontend/UI only — never reviews (its backend is Gemini) |
+| **Reviewer** | Codex (`coder`) | Independent VERDICT: ACCEPTED / NEEDS FIX — advisory, not binding |
+
+> The human (you) stays the ultimate authority: model-tier changes and non-convergent loops escalate to you.
+
+---
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `backends/bin/` | The Chinese-model backends: `cc_model_launch` shared core + 9 thin `*-code` launchers + `cc-model-registry.tsv` + `cc-models` dispatcher + **`cc-sync`** (auto-follow Claude Code + model updates) |
+| `backends/{install,verify}.sh`, `backends/prompts/` | Install / self-check / per-provider prompt add-ons |
+| `orchestration/fanout/` | The `fanout` CLI (14 subcommands) + `SKILL.md` (5-phase workflow + Phase 5 loop) + `workspaces/` + `templates/` + 13 test suites |
+| `orchestration/ccb/ccb.config.example` | Sanitized ccb multi-window topology template (placeholder keys) |
+| `orchestration/cn-plugin/cn/` | Claude Code plugin: `/cn:*` commands + `cn-dispatch` agent (derived from `openai/codex-plugin-cc`) |
+| `orchestration/agent-team/` | Workflow-tool orchestration example (multi-model planning → implement → review) |
+| `scripts/` | `scan-secrets.sh` + `check-shell.sh` (shared by Make / CI / pre-commit) |
+| `AGENTS.md` | Cross-harness entry — Claude Code / Codex / OpenCode all read it; one bash CLI drives the workflow from any agent |
+| `docs/` | [`WORKFLOW.md`](docs/WORKFLOW.md) (end-to-end pipeline) · [`AGENT_TEAM.md`](docs/AGENT_TEAM.md) (multi-model planning + sub-agents) · [`INTEGRATIONS.md`](docs/INTEGRATIONS.md) (consuming cn-cc as an engine, e.g. CivAgent) |
+
+---
+
+## Quick start
+
+**Requirements:** macOS/Linux · Node ≥ 18.18 · `git`, `tmux` · [ccb](https://github.com/SeemSeam/claude_codex_bridge) (for multi-window fan-out) · `codex` (reviewer) · optional `agy` (frontend).
+
+```bash
+git clone https://github.com/LeoLin990405/cn-cc-workflow
+cd cn-cc-workflow
+
+# 0) See what THIS machine has + get a workflow recommendation (never reads key values)
+make doctor
+
+# 1) Install the backends (mirrors ~/bin/cc-*; put keys in ~/.config/cc-model-secrets.env)
+./backends/install.sh                  # launchers only
+./backends/install.sh --install-claude-code   # also install pinned claude-code per env
+./backends/verify.sh && cc-models doctor
+
+# 2) Single-machine, lightweight fan-out (no ccb): use the /cn:* plugin inside Claude Code
+#    /cn:team  /cn:ask  /cn:glm ...
+
+# 3) Full multi-agent workflow (ccb multi-window)
+cp orchestration/ccb/ccb.config.example /path/to/proj/.ccb/ccb.config   # fill real keys
+cd /path/to/proj && ccb                # start planner/work/ark/review panes
+#    then drive the 5-phase fanout (see docs/WORKFLOW.md)
+```
+
+API keys live **only** in `~/.config/cc-model-secrets.env` (read by the launchers) — never in the repo. See [Security](#security).
+
+---
+
+## Install as a Claude Code Skill
+
+The orchestration layer ships as a **Claude Code Skill** you can invoke by name. One-line install:
+
+```bash
+make install-skill        # → ~/.claude/skills/fanout (any existing copy is backed up first)
+```
+
+Then **restart your Claude Code session** and wake it:
+
+- Slash command: **`/fanout`**
+- Or just describe a multi-agent task — it auto-triggers on phrases like *"fan out X"*, *"use the model fleet + a reviewer to build Y"*, *"frontend + backend + review"*, *"split this across multiple agents"*.
+
+The installer copies the skill plus all `fanout` tools, workspaces and templates; verify with `~/.claude/skills/fanout/fanout selftest`. API keys never travel with the skill — they stay in `~/.config/cc-model-secrets.env`.
+
+---
+
+## The `fanout` CLI
+
+`orchestration/fanout/fanout` is the single entry point. Run `fanout help` for the full list.
+
+| Command | What it does |
+|---|---|
+| `fanout doctor` | Detect installed agents/CLIs + configured APIs → recommend a workflow |
+| `fanout fleet status\|up\|down` | Bring up / check / stop the ccb fleet — strips `CLAUDE_CODE_*` (avoids OAuth false-401) + starts panes in detached tmux |
+| `fanout preflight [cfg]` | Go/no-go gate: deps · ccbd alive · ccb.config sanity · **no-Gemini guard** · `--probe` endpoint liveness |
+| `fanout task new\|log\|done` | Scaffold / log / close a TASK file |
+| `fanout allocate <type> [--top]` | Bench-recommended model for a task type (`code`→minimax, `logic`→kimi, …) |
+| `fanout workspace list\|show\|model\|context <ws>` | Per-task **context isolation** — assemble `System + Workspace + Tools + Memory + History` |
+| `fanout experience add\|list\|recall\|show <ws>` | **Experience memory** — completed work → reusable method → sanitized → recalled into context |
+| `fanout template <name> [--set K=V]` | Render a prompt template (`impl` / `analysis` / `review`) |
+| `fanout dispatch <target> [--harness ccb\|codex\|opencode] [--workspace ws] [--template n]` | Dispatch to an implementer on **any harness** (ccb=Claude Code fleet / codex / opencode): render → run → log |
+| `fanout cache init\|put\|fail\|barrier\|collect\|resume\|...` | Result cache + **fan-in barrier** (dispatch N ⇒ return N) + timing + resume |
+| `fanout summary <round> [--task f]` | Round observability summary (status + elapsed) |
+| `fanout plan "<goal>" [--models a,b,c]` | **Planning panel** — fan a goal decomposition out to several models |
+| `fanout goal template\|show\|check <spec>` | **Goal mode** — declarative target + deterministic acceptance gate |
+| `fanout ccb-sync check\|adapt [--apply]` | Adapt after a ccb update (version drift · grafting check · ccbd restart) |
+| `fanout selftest` | Run all 13 test suites (119 assertions) |
+
+---
+
+## Workflow
+
+The core is a **5-phase pipeline** (full detail in [`docs/WORKFLOW.md`](docs/WORKFLOW.md)):
+
+1. **Plan** — preflight gate + scaffold a TASK file, split by file.
+2. **Dispatch + cache + barrier** — `ccb ask` in parallel; each result caches first; the fan-in barrier requires all N back before advancing.
+3. **Integrate** — cherry-pick each worktree onto `main`; run local sanity.
+4. **Review** — Codex returns a VERDICT.
+5. **Review-Fix Loop** (bounded) — deterministic gate first → incremental review → keep-best (revert regressions) → operator patch → meta-reflect on non-convergence; capped, then escalate.
+
+**Higher-level entry modes** layer on top:
+
+- **Goal mode** — `fanout goal check <spec>` runs a declarative acceptance gate the loop drives toward.
+- **Planning panel** — `fanout plan` fans decomposition out to multiple models; synthesize into Phase 1.
+- **Workspace isolation** — `fanout dispatch --workspace <ws>` gives a model only the context that workspace needs.
+
+See [`docs/AGENT_TEAM.md`](docs/AGENT_TEAM.md) for multi-model planning and hierarchical sub-agents (ccb fleet vs. native Claude Code subagents).
+
+---
+
+## Design principles
+
+- **Generation ≠ review** — implementers and the reviewer are different model families.
+- **`main` is the single source of truth** — implementers work in worktree sandboxes; only reviewed changes are cherry-picked back.
+- **Bounded loop** — gate-first, keep-best, ≥2 confirmation passes, meta-reflect; capped, then escalate. Never loops forever, never hard-marks DONE.
+- **Cache-first + fan-in barrier** — every result is cached durably; N dispatched ⇒ N returned before the next round.
+- **Context isolation** — weaker models see only what the workspace needs.
+- **Keys stay out of the repo** — only `~/.config/cc-model-secrets.env`; the repo ships only `.example`. Pre-commit + CI scan blocks leaks.
+- **No Gemini** — review / second opinions go to Codex or a Chinese backend.
+
+---
+
+## Development
+
+Three gates (secrets / shell / tests) run identically locally and in CI, reusing `scripts/scan-secrets.sh` + `scripts/check-shell.sh`:
+
+```bash
+make ci          # = scan + lint + test (CI-equivalent)
+make scan        # secret-leak gate (fingerprints + ccb.config placeholder check)
+make lint        # bash -n + shellcheck (.shellcheckrc)
+make test        # cn-plugin + fanout selftest (119 assertions)
+make doctor      # environment recon
+make help        # all targets
+
+pipx install pre-commit && pre-commit install   # scan on every commit
+```
+
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs three jobs: **secret-scan** (custom gate + gitleaks), **shell** (`bash -n` + shellcheck), **node** (`npm test`). See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+---
+
+## Security
+
+This workflow handles API keys. Hard rules (full policy in [`SECURITY.md`](SECURITY.md)):
+
+- Real keys live only in `~/.config/cc-model-secrets.env` (or your project-local `.ccb/ccb.config`, which is git-ignored). The repo ships only `ccb.config.example` with `<PLACEHOLDER>` keys.
+- `.gitignore` excludes `**/.ccb/ccb.config`, `*secrets*.env`, `.env*`, and the runtime `.fanout-cache/`.
+- Every commit/push passes a custom fingerprint scan + gitleaks; CI blocks merges on a hit.
+- Report vulnerabilities privately via GitHub Security Advisory — do not open a public issue.
+
+---
+
+## Acknowledgements
+
+- [**openai/codex-plugin-cc**](https://github.com/openai/codex-plugin-cc) (Apache-2.0) — the plugin architecture (`/cn:*` commands, agents, skills, companion scripts) that `orchestration/cn-plugin/` derives from.
+- [**Zleap-AI/Zleap-Agent**](https://github.com/Zleap-AI/Zleap-Agent) — inspiration for the **Workspace isolation** and **Experience memory** ideas (concepts only; code is independent, as Zleap is unlicensed).
+- The **Phase 5 loop** design draws on published work on agentic verification loops (Self-Refine, Reflexion, loop-engineering 2026).
+
+See [`NOTICE`](NOTICE) for attribution detail.
+
+---
+
+## License
+
+[Apache-2.0](LICENSE) © 2026 LeoLin990405. See [`NOTICE`](NOTICE).
