@@ -32,5 +32,5 @@ if [ "${1:-}" = "--install-claude-code" ]; then
   done
 fi
 
-echo "Installed cn-cc launchers to $TARGET_BIN"
+echo "Installed open-sakanafugu launchers to $TARGET_BIN"
 echo "Run: cc-models doctor"

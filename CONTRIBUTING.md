@@ -5,8 +5,8 @@ PRs welcome. This is a workflow repo that stitches together Chinese-model backen
 ## Dev Environment
 
 ```bash
-git clone https://github.com/LeoLin990405/cn-cc-workflow
-cd cn-cc-workflow
+git clone https://github.com/LeoLin990405/open-sakanafugu
+cd open-sakanafugu
 
 # Tools (for running the gates locally)
 brew install shellcheck gitleaks        # or apt

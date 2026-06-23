@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/), versioning [SemV
 ## [Unreleased]
 
 ### Added
-- **`docs/INTEGRATIONS.md`**: the **stable contract** for consuming cn-cc as an execution engine from a higher-level framework (fanout CLI / `--harness` dispatch / backends / allocate / cache / fleet / preflight / no-Gemini); CivAgent integration roadmap (two repos with clean dependencies, not a flat merge).
+- **`docs/INTEGRATIONS.md`**: the **stable contract** for consuming open-sakanafugu as an execution engine from a higher-level framework (fanout CLI / `--harness` dispatch / backends / allocate / cache / fleet / preflight / no-Gemini); CivAgent integration roadmap (two repos with clean dependencies, not a flat merge).
 - **Multi-harness adapters (the foundation for civagent dependency integration)**: `AGENTS.md` cross-harness entry point (read by Claude Code / Codex / OpenCode alike); `fanout dispatch --harness ccb|codex|opencode` — selectable dispatch executor (ccb=Claude Code cc-* clones / codex=codex exec / opencode=opencode run), where `<target>` means different things per harness; `FANOUT_CODEX`/`FANOUT_OPENCODE` can be stubbed. dispatch self-tests +3 (codex/opencode/unknown harness).
 - Architecture SVG `docs/architecture.svg`, embedded in the README (image first + the text version tucked into `<details>`).
 - GitHub repo About description + 12 topics + homepage.
@@ -70,5 +70,5 @@ First public release — the Chinese-model multi-agent coding workflow plus its 
 ### Documentation
 - Bilingual GitHub-standard README: English `README.md` + `README_ZH.md` (badges / TOC / architecture / CLI reference / workflow / security / acknowledgements). Acknowledges openai/codex-plugin-cc (Apache-2.0) + Zleap-Agent (concepts).
 
-[Unreleased]: https://github.com/LeoLin990405/cn-cc-workflow/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/LeoLin990405/cn-cc-workflow/releases/tag/v1.0.0
+[Unreleased]: https://github.com/LeoLin990405/open-sakanafugu/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/LeoLin990405/open-sakanafugu/releases/tag/v1.0.0

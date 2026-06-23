@@ -1,14 +1,14 @@
 {
-  "name": "cn-cc-workflow",
+  "name": "open-sakanafugu",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Chinese-model multi-agent coding workflow: backends + fanout + ccb + bounded review-fix loop + auto-sync",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/LeoLin990405/cn-cc-workflow",
+  "homepage": "https://github.com/LeoLin990405/open-sakanafugu",
   "repository": {
     "type": "git",
-    "url": "https://github.com/LeoLin990405/cn-cc-workflow.git"
+    "url": "https://github.com/LeoLin990405/open-sakanafugu.git"
   },
   "engines": {
     "node": ">=18.18.0"

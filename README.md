@@ -1,6 +1,6 @@
-# cn-cc-workflow
+# open-sakanafugu
 
-[![CI](https://github.com/LeoLin990405/cn-cc-workflow/actions/workflows/ci.yml/badge.svg)](https://github.com/LeoLin990405/cn-cc-workflow/actions/workflows/ci.yml)
+[![CI](https://github.com/LeoLin990405/open-sakanafugu/actions/workflows/ci.yml/badge.svg)](https://github.com/LeoLin990405/open-sakanafugu/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518.18-339933.svg)](package.json)
 [![Tests](https://img.shields.io/badge/tests-312%20passing-success.svg)](orchestration/fanout)
@@ -43,7 +43,7 @@ Small / cheap models fail when an agent shows them *every* tool, memory, rule an
 
 ## Architecture
 
-<img src="docs/architecture.svg" alt="cn-cc-workflow architecture" width="760">
+<img src="docs/architecture.svg" alt="open-sakanafugu architecture" width="760">
 
 <details>
 <summary>Text diagram</summary>
@@ -92,7 +92,7 @@ Small / cheap models fail when an agent shows them *every* tool, memory, rule an
 | `orchestration/agent-team/` | Workflow-tool orchestration example (multi-model planning → implement → review) |
 | `scripts/` | `scan-secrets.sh` (secret-leak gate) + `check-shell.sh` (bash -n + shellcheck) + `check-docs.sh` (docs-match-code gate) + `install-skill.sh` — shared by Make / CI / pre-commit |
 | `AGENTS.md` | Cross-harness entry — Claude Code / Codex / OpenCode all read it; one bash CLI drives the workflow from any agent |
-| `docs/` | [`WORKFLOW.md`](docs/WORKFLOW.md) (end-to-end pipeline) · [`AGENT_TEAM.md`](docs/AGENT_TEAM.md) (multi-model planning + sub-agents) · [`INTEGRATIONS.md`](docs/INTEGRATIONS.md) (consuming cn-cc as an engine, e.g. CivAgent) |
+| `docs/` | [`WORKFLOW.md`](docs/WORKFLOW.md) (end-to-end pipeline) · [`AGENT_TEAM.md`](docs/AGENT_TEAM.md) (multi-model planning + sub-agents) · [`INTEGRATIONS.md`](docs/INTEGRATIONS.md) (consuming open-sakanafugu as an engine, e.g. CivAgent) |
 
 ---
 
@@ -101,8 +101,8 @@ Small / cheap models fail when an agent shows them *every* tool, memory, rule an
 **Requirements:** macOS/Linux · Node ≥ 18.18 · `git`, `tmux` · [ccb](https://github.com/SeemSeam/claude_codex_bridge) (for multi-window fan-out) · `codex` (reviewer) · optional `agy` (frontend).
 
 ```bash
-git clone https://github.com/LeoLin990405/cn-cc-workflow
-cd cn-cc-workflow
+git clone https://github.com/LeoLin990405/open-sakanafugu
+cd open-sakanafugu
 
 # 0) See what THIS machine has + get a workflow recommendation (never reads key values)
 make doctor
