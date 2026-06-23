@@ -1,15 +1,15 @@
-# open-sakanafugu
+# fugue
 
-[![CI](https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml/badge.svg)](https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml)
+[![CI](https://github.com/BicaMindLabs/fugue/actions/workflows/ci.yml/badge.svg)](https://github.com/BicaMindLabs/fugue/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518.18-339933.svg)](package.json)
 [![Tests](https://img.shields.io/badge/tests-312%20passing-success.svg)](orchestration/fanout)
 
 **English | [简体中文](README_ZH.md)**
 
-> **open-sakanafugu** is an open, harness-engineered take on [Sakana AI's Fugu](https://sakana.ai/fugu/): **many agents behind one interface**, coordinated into a single trustworthy answer by *orchestration* rather than a bigger model. A fleet of cheap models implements, an independent-family reviewer judges, and a **bounded review-fix loop** converges to acceptance — never looping forever, never hard-marking done.
+> **fugue** is an open, harness-engineered take on [Sakana AI's Fugu](https://sakana.ai/fugu/): **many agents behind one interface**, coordinated into a single trustworthy answer by *orchestration* rather than a bigger model. A fleet of cheap models implements, an independent-family reviewer judges, and a **bounded review-fix loop** converges to acceptance — never looping forever, never hard-marking done.
 
-Fugu's bet is that **coordination, not raw model size, is the lever** — a learned conductor routes work across specialized agents and verifies the result. open-sakanafugu reproduces that *shape* with **engineering instead of training**: one [`fanout`](#the-fanout-cli) CLI is the single interface; **9 Chinese LLMs** (each an isolated Claude Code instance) are the workers; a different-family reviewer (Codex) is the verifier; and the router is a **Bayesian bandit that learns which model wins which task type** from every review verdict — a training-free analogue of Fugu's evolved coordinator. A fan-out/fan-in cache guarantees completeness, and per-task **workspace isolation** keeps weak models from drowning in context.
+Fugu's bet is that **coordination, not raw model size, is the lever** — a learned conductor routes work across specialized agents and verifies the result. fugue reproduces that *shape* with **engineering instead of training**: one [`fanout`](#the-fanout-cli) CLI is the single interface; **9 Chinese LLMs** (each an isolated Claude Code instance) are the workers; a different-family reviewer (Codex) is the verifier; and the router is a **Bayesian bandit that learns which model wins which task type** from every review verdict — a training-free analogue of Fugu's evolved coordinator. A fan-out/fan-in cache guarantees completeness, and per-task **workspace isolation** keeps weak models from drowning in context.
 
 ---
 
@@ -46,7 +46,7 @@ Small / cheap models fail when an agent shows them *every* tool, memory, rule an
 
 ## Architecture
 
-<img src="docs/architecture.svg" alt="open-sakanafugu architecture" width="760">
+<img src="docs/architecture.svg" alt="fugue architecture" width="760">
 
 <details>
 <summary>Text diagram</summary>
@@ -90,9 +90,9 @@ Small / cheap models fail when an agent shows them *every* tool, memory, rule an
 - **TRINITY** ([arXiv:2512.04695](https://arxiv.org/abs/2512.04695)) — an evolved coordinator (a **Qwen3-0.6B** backbone tuned by **sep-CMA-ES**, not RL/SFT) that each turn picks one model **and** one role from **Thinker / Worker / Verifier**, terminating when the Verifier accepts.
 - **Conductor** ([arXiv:2512.04388](https://arxiv.org/abs/2512.04388)) — a **Qwen2.5-7B** coordinator trained with **RL (GRPO)** whose per-step action is *{a model, a natural-language subtask, an access-list of who may see whose output}*.
 
-open-sakanafugu is an **independent, training-free, self-hostable analogue** of that *idea* — it reaches a similar division of labour through **harness engineering** instead of an RL/evolution pipeline:
+fugue is an **independent, training-free, self-hostable analogue** of that *idea* — it reaches a similar division of labour through **harness engineering** instead of an RL/evolution pipeline:
 
-| Sakana Fugu (TRINITY / Conductor) | open-sakanafugu |
+| Sakana Fugu (TRINITY / Conductor) | fugue |
 |---|---|
 | Many agents behind one **OpenAI-compatible API** | many agents behind one `fanout` bash CLI you (or any agent) drive |
 | **Thinker / Worker / Verifier** roles (TRINITY) | Planner / Implementers / Reviewer, wired by convention — generation ≠ review |
@@ -101,9 +101,9 @@ open-sakanafugu is an **independent, training-free, self-hostable analogue** of 
 | **Access-list** — who may see whose output (Conductor) | context isolation — workspace trimming + skills progressive disclosure + `integrate --ownership` |
 | Verify before trusting output (Verifier role) | a bounded review-fix loop gated deterministically before any model self-report |
 
-**What's the same:** the philosophy — *harness objective verification, don't trust a model's self-report*, and let coordination (not model size) do the work. **What's different:** Fugu *trains/evolves* its coordinators (and ships one hosted, proprietary API); open-sakanafugu is training-free and runs today over any model fleet — the "learning" is a Bayesian prior+posterior updated from each review verdict, not a gradient step, and every routing decision is transparent bash. It is inspired by the Fugu *framing*, not derived from Sakana's code or models — a hand-written harness will trail a trained 0.6B coordinator on coordination quality (the papers' ablations show the roles/depth matter), but it costs nothing to run and every decision is inspectable.
+**What's the same:** the philosophy — *harness objective verification, don't trust a model's self-report*, and let coordination (not model size) do the work. **What's different:** Fugu *trains/evolves* its coordinators (and ships one hosted, proprietary API); fugue is training-free and runs today over any model fleet — the "learning" is a Bayesian prior+posterior updated from each review verdict, not a gradient step, and every routing decision is transparent bash. It is inspired by the Fugu *framing*, not derived from Sakana's code or models — a hand-written harness will trail a trained 0.6B coordinator on coordination quality (the papers' ablations show the roles/depth matter), but it costs nothing to run and every decision is inspectable.
 
-> **Want a faithful reimplementation instead?** [trotsky1997/OpenFugu](https://github.com/trotsky1997/OpenFugu) actually *trains* the coordinators — TRINITY via sep-CMA-ES, Conductor via GRPO, with published weights — and serves them as an OpenAI-compatible API; it reconstructs Fugu's architecture. open-sakanafugu deliberately takes the **training-free harness route**: no weights, no GPU, no training pipeline — just orchestration of a model fleet you can read and run today, wired into a coding workflow rather than a served endpoint. Same inspiration, complementary answers.
+> **Want a faithful reimplementation instead?** [trotsky1997/OpenFugu](https://github.com/trotsky1997/OpenFugu) actually *trains* the coordinators — TRINITY via sep-CMA-ES, Conductor via GRPO, with published weights — and serves them as an OpenAI-compatible API; it reconstructs Fugu's architecture. fugue deliberately takes the **training-free harness route**: no weights, no GPU, no training pipeline — just orchestration of a model fleet you can read and run today, wired into a coding workflow rather than a served endpoint. Same inspiration, complementary answers.
 
 ---
 
@@ -119,7 +119,7 @@ open-sakanafugu is an **independent, training-free, self-hostable analogue** of 
 | `orchestration/agent-team/` | Workflow-tool orchestration example (multi-model planning → implement → review) |
 | `scripts/` | `scan-secrets.sh` (secret-leak gate) + `check-shell.sh` (bash -n + shellcheck) + `check-docs.sh` (docs-match-code gate) + `install-skill.sh` — shared by Make / CI / pre-commit |
 | `AGENTS.md` | Cross-harness entry — Claude Code / Codex / OpenCode all read it; one bash CLI drives the workflow from any agent |
-| `docs/` | [`WORKFLOW.md`](docs/WORKFLOW.md) (end-to-end pipeline) · [`AGENT_TEAM.md`](docs/AGENT_TEAM.md) (multi-model planning + sub-agents) · [`INTEGRATIONS.md`](docs/INTEGRATIONS.md) (consuming open-sakanafugu as an engine, e.g. CivAgent) |
+| `docs/` | [`WORKFLOW.md`](docs/WORKFLOW.md) (end-to-end pipeline) · [`AGENT_TEAM.md`](docs/AGENT_TEAM.md) (multi-model planning + sub-agents) · [`INTEGRATIONS.md`](docs/INTEGRATIONS.md) (consuming fugue as an engine, e.g. CivAgent) |
 
 ---
 
@@ -128,8 +128,8 @@ open-sakanafugu is an **independent, training-free, self-hostable analogue** of 
 **Requirements:** macOS/Linux · Node ≥ 18.18 · `git`, `tmux` · [ccb](https://github.com/SeemSeam/claude_codex_bridge) (for multi-window fan-out) · `codex` (reviewer) · optional `agy` (frontend).
 
 ```bash
-git clone https://github.com/BicaMindLabs/open-sakanafugu
-cd open-sakanafugu
+git clone https://github.com/BicaMindLabs/fugue
+cd fugue
 
 # 0) See what THIS machine has + get a workflow recommendation (never reads key values)
 make doctor
@@ -294,8 +294,8 @@ This workflow handles API keys. Hard rules (full policy in [`SECURITY.md`](SECUR
 - [**kunchenguid/no-mistakes**](https://github.com/kunchenguid/no-mistakes) & [**lavish-axi**](https://github.com/kunchenguid/lavish-axi) (MIT) — the loop's **auto-fix vs ask-user** finding split + the **`run` state facade** (axi-style), and the **docs-match-code** drift gate (from `build:skill --check`).
 - [**merkyor/Lynn**](https://gitee.com/merkyor/Lynn) — the orchestrator-side **ownership / violation-detection** idea behind `integrate --ownership` (enforce on the orchestrator, don't trust the worker's prompt).
 - **Anthropic `skill-creator`** (the official Claude Code meta-skill) — `fanout skills forge` delegates skill *authoring* to it, and the `validate` gate mirrors its `quick_validate.py` checks.
-- [**Sakana AI — Fugu**](https://sakana.ai/fugu/) — the framing this project is named for: many agents behind one interface, a learned coordinator + verifier (TRINITY / Conductor). open-sakanafugu is an independent, training-free, harness-engineered analogue — inspired by the *idea*, not derived from their code (see [Relation to Sakana Fugu](#relation-to-sakana-fugu)).
-- [**trotsky1997/OpenFugu**](https://github.com/trotsky1997/OpenFugu) — a sibling effort and faithful open *reimplementation* of Fugu that actually trains TRINITY/Conductor and serves them as an API. Independent project, same inspiration; open-sakanafugu is the complementary training-free harness take.
+- [**Sakana AI — Fugu**](https://sakana.ai/fugu/) — the framing this project is named for: many agents behind one interface, a learned coordinator + verifier (TRINITY / Conductor). fugue is an independent, training-free, harness-engineered analogue — inspired by the *idea*, not derived from their code (see [Relation to Sakana Fugu](#relation-to-sakana-fugu)).
+- [**trotsky1997/OpenFugu**](https://github.com/trotsky1997/OpenFugu) — a sibling effort and faithful open *reimplementation* of Fugu that actually trains TRINITY/Conductor and serves them as an API. Independent project, same inspiration; fugue is the complementary training-free harness take.
 - The **Phase 5 loop** design draws on agentic verification-loop work (Self-Refine, Reflexion, loop-engineering 2026); the **adaptive router** on the multi-armed-bandit literature — Thompson Sampling (Agrawal & Goyal 2012), non-stationary/discounted bandits (Garivier & Moulines 2011).
 
 See [`NOTICE`](NOTICE) for attribution detail.

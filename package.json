@@ -1,15 +1,15 @@
 {
-  "name": "open-sakanafugu",
+  "name": "fugue",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Chinese-model multi-agent coding workflow: backends + fanout + ccb + bounded review-fix loop + auto-sync",
   "license": "Apache-2.0",
   "author": "BicaMind Labs",
-  "homepage": "https://github.com/BicaMindLabs/open-sakanafugu",
+  "homepage": "https://github.com/BicaMindLabs/fugue",
   "repository": {
     "type": "git",
-    "url": "https://github.com/BicaMindLabs/open-sakanafugu.git"
+    "url": "https://github.com/BicaMindLabs/fugue.git"
   },
   "engines": {
     "node": ">=18.18.0"

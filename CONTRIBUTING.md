@@ -5,8 +5,8 @@ PRs welcome. This is a workflow repo that stitches together Chinese-model backen
 ## Dev Environment
 
 ```bash
-git clone https://github.com/BicaMindLabs/open-sakanafugu
-cd open-sakanafugu
+git clone https://github.com/BicaMindLabs/fugue
+cd fugue
 
 # Tools (for running the gates locally)
 brew install shellcheck gitleaks        # or apt

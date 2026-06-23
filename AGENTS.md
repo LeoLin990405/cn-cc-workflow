@@ -1,4 +1,4 @@
-# AGENTS.md — open-sakanafugu
+# AGENTS.md — fugue
 
 Cross-harness entry for any coding agent (**Claude Code / Codex / OpenCode** all read this file). This repo is a multi-agent coding workflow driven by one harness-agnostic bash CLI — so the same workflow runs no matter which agent you are.
 

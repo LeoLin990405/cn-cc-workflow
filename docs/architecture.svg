@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 570" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="13">
   <rect x="1" y="1" width="778" height="568" rx="14" fill="#fbfcfd" stroke="#d0d7de"/>
-  <text x="390" y="34" text-anchor="middle" font-size="18" font-weight="700" fill="#1f2328">open-sakanafugu — architecture</text>
+  <text x="390" y="34" text-anchor="middle" font-size="18" font-weight="700" fill="#1f2328">fugue — architecture</text>
   <text x="390" y="54" text-anchor="middle" font-size="12" fill="#656d76">Planner · Implementers · Frontend · Reviewer + bounded review-fix loop</text>
 
   <!-- Planner -->
