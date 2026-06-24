@@ -37,6 +37,18 @@ export type {
   AllocationParams,
 } from './domain/allocation.js';
 export { DEFAULT_ALLOCATION_PARAMS, UNLISTED_RANK } from './domain/allocation.js';
+export type { GateSeverity, GateCheck, GateResult } from './domain/gate.js';
+export { isGo, failures, warnings, mergeGates } from './domain/gate.js';
+export type { Selection, PolicyViolation, PolicyResult, Policy } from './domain/policy.js';
+export {
+  noGeminiPolicy,
+  generationNotReviewPolicy,
+  reviewerRequiredPolicy,
+  DEFAULT_POLICIES,
+  evaluatePolicies,
+  policyResultToGate,
+} from './domain/policy-eval.js';
+export { checkCcbConfig } from './domain/preflight-checks.js';
 export {
   rankAgents,
   applyOutcome,
@@ -51,6 +63,7 @@ export type { Barrier } from './domain/ports/barrier.js';
 export type { RunStore, RunPatch } from './domain/ports/run-store.js';
 export type { ReviewLoop } from './domain/ports/review-loop.js';
 export type { AllocationStrategy, RankOptions } from './domain/ports/allocation-strategy.js';
+export type { QualityGate } from './domain/ports/quality-gate.js';
 
 // Infra — injected IO
 export type { Clock } from './infra/clock.js';
