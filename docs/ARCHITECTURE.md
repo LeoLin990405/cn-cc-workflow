@@ -69,13 +69,15 @@ type Policy = { id: string; evaluate(sel: Selection): PolicyResult };           
 `async` at the world's edge, pure otherwise. No `any`; expected failure is a typed `Result<T,E>`, exceptions only for programmer error.
 
 ```ts
-// transport + job control over a fleet (ccb/codex/opencode). NOT "returns a Verdict".
+// dispatch work to an agent over a fleet (ccb/codex/opencode). NOT "returns a Verdict".
+// Revised from the iter0 submit/status/collect/cancel job model (iter5): every
+// harness we target is a blocking CLI (`ccb ask`, `codex exec`, `opencode run`),
+// so one async dispatch + Result is exact; an async job machine over a synchronous
+// tool was unjustified. Fan-out parallelism + resume live in Barrier/ResultStore,
+// not here. A future remote-queue harness can poll internally and still resolve one Promise.
 interface Harness {
   readonly name: 'ccb' | 'codex' | 'opencode';
-  submit(req: DispatchRequest): Promise<Result<JobHandle, DispatchError>>;
-  status(h: JobHandle): Promise<TaskState>;
-  collect(h: JobHandle): Promise<Result<Artifact[], DispatchError>>;
-  cancel(h: JobHandle): Promise<void>;
+  dispatch(req: DispatchRequest): Promise<Result<DispatchResult, DispatchError>>;
   health(): Promise<HealthStatus>;
 }
 

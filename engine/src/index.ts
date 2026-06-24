@@ -49,6 +49,13 @@ export {
   policyResultToGate,
 } from './domain/policy-eval.js';
 export { checkCcbConfig } from './domain/preflight-checks.js';
+export type {
+  DispatchRequest,
+  DispatchResult,
+  DispatchError,
+  DispatchErrorKind,
+  HealthStatus,
+} from './domain/dispatch.js';
 export {
   rankAgents,
   applyOutcome,
@@ -64,16 +71,19 @@ export type { RunStore, RunPatch } from './domain/ports/run-store.js';
 export type { ReviewLoop } from './domain/ports/review-loop.js';
 export type { AllocationStrategy, RankOptions } from './domain/ports/allocation-strategy.js';
 export type { QualityGate } from './domain/ports/quality-gate.js';
+export type { Harness, HarnessName } from './domain/ports/harness.js';
 
 // Infra — injected IO
 export type { Clock } from './infra/clock.js';
 export { systemClock } from './infra/clock.js';
 export type { FileSystem } from './infra/file-system.js';
+export type { CommandRunner, CommandResult, CommandOptions } from './infra/command-runner.js';
 export type { Rng } from './infra/rng.js';
 export { systemRng } from './infra/rng.js';
 export { seededRng } from './infra/seeded-rng.js';
 export { NodeFileSystem } from './infra/node-file-system.js';
 export { MemoryFileSystem } from './infra/memory-file-system.js';
+export { NodeCommandRunner } from './infra/node-command-runner.js';
 
 // Adapters
 export { InMemoryResultStore } from './adapters/store/in-memory-result-store.js';
@@ -83,6 +93,10 @@ export { FsRunStore } from './adapters/store/fs-run-store.js';
 export { PersistentBarrier } from './adapters/barrier/persistent-barrier.js';
 export { PersistentReviewLoop } from './adapters/loop/persistent-review-loop.js';
 export { BetaBernoulliAllocator } from './adapters/allocation/beta-bernoulli-allocator.js';
+export { CcbHarness } from './adapters/harness/ccb-harness.js';
+export { CodexHarness } from './adapters/harness/codex-harness.js';
+export { OpencodeHarness } from './adapters/harness/opencode-harness.js';
+export type { HarnessExecOptions } from './adapters/harness/exec-helpers.js';
 
 // App helpers
 export { waitForRound } from './app/wait-for-round.js';

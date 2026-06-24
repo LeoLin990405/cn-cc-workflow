@@ -15,8 +15,8 @@ Legend: `bash ✓` shipped in shell · `ts …` engine status (`◐ core` = port
 | 7 | `workspace` (list/show/model/context) | `Workspace` / `ContextAssembler` | ✓ | ☐ | ☐ |
 | 8 | `experience` (add/recall/...) | `ExperienceStore` | ✓ | ☐ | ☐ |
 | 9 | `skills` (index/match/inject/forge/validate) | `SkillCatalog` | ✓ | ☐ | ☐ |
-| 10 | `dispatch` (--harness ...) | `Harness` + `Phase` | ✓ | ☐ | ☐ |
-| 11 | `fleet` (status/up/down) | `Harness.health` + launcher | ✓ | ☐ | ☐ |
+| 10 | `dispatch` (--harness ...) | `Harness` + `Phase` | ✓ | ◐ core (iter5) | ☐ |
+| 11 | `fleet` (status/up/down) | `Harness.health` + launcher | ✓ | ◐ health (iter5) | ☐ |
 | 12 | `doctor` | recon (composition of `Harness.health`/gates) | ✓ | ☐ | ☐ |
 | 13 | `plan` (multi-model panel) | `Phase` (planning) | ✓ | ☐ | ☐ |
 | 14 | `run` (set/round/status/next) | `RunState` facade (`RunStore`) | ✓ | ◐ core (iter1) | ☐ |
