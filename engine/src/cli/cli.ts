@@ -7,6 +7,7 @@ import {
   AgentRegistryTemplateCommand,
   AgentRegistryValidateCommand,
 } from './commands/agent-registry.js';
+import { AllocateCommand } from './commands/allocate.js';
 import { CacheCommand } from './commands/cache.js';
 import { DoctorCommand } from './commands/doctor.js';
 import {
@@ -47,6 +48,7 @@ export const buildCli = (): Cli => {
   cli.register(Builtins.VersionCommand);
   cli.register(VersionCommand);
   cli.register(DoctorCommand);
+  cli.register(AllocateCommand);
   cli.register(ExperienceAddCommand);
   cli.register(ExperienceListCommand);
   cli.register(ExperienceRecallCommand);

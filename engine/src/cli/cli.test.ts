@@ -351,6 +351,194 @@ describe('fugue CLI', () => {
     });
   });
 
+  describe('allocate command', () => {
+    let dir: string;
+    let table: string;
+    let stats: string;
+    let ledger: string;
+
+    beforeEach(async () => {
+      dir = await mkdtemp(join(tmpdir(), 'fugue-allocate-'));
+      table = join(dir, 'allocation.tsv');
+      stats = join(dir, 'allocation-stats.tsv');
+      ledger = join(dir, 'alloc-ledger.tsv');
+      await writeFile(
+        table,
+        [
+          'code\tminimax,doubao,glm',
+          'logic\tkimi,mimo,doubao',
+          'sql\tdoubao,glm,kimi',
+          'docs\tkimi,glm,deepseek',
+          'review\tcoder',
+          'fallback\tmimo',
+          '',
+        ].join('\n'),
+        'utf8',
+      );
+    });
+
+    afterEach(async () => {
+      delete process.env.FUGUE_ALLOCATE_SEED;
+      await rm(dir, { recursive: true, force: true });
+    });
+
+    const args = (...rest: readonly string[]): readonly string[] => [
+      'allocate',
+      '--table',
+      table,
+      '--stats',
+      stats,
+      '--ledger',
+      ledger,
+      ...rest,
+    ];
+
+    it('ranks cold-start models, falls back for unknown task types, and lists the table', async () => {
+      const code = await run(args('code'));
+      const logicTop = await run(args('logic', '--top'));
+      const sql = await run(args('sql'));
+      const review = await run(args('review', '--top'));
+      const list = await run(args('list'));
+      const fallback = await run(args('bogusXYZ'));
+      const noArgs = await run(args());
+
+      expect(code.out.trim()).toBe('minimax,doubao,glm');
+      expect(logicTop.out.trim()).toBe('kimi');
+      expect(sql.out).toContain('doubao');
+      expect(review.out.trim()).toBe('coder');
+      expect(list.out.split(/\r?\n/u).filter(Boolean).length).toBeGreaterThanOrEqual(6);
+      expect(fallback.out.trim()).toBe('mimo');
+      expect(fallback.err).toContain('falling back to fallback');
+      expect(noArgs.code).toBe(2);
+    });
+
+    it('updates posterior evidence, normalizes records, and renders stats', async () => {
+      await run(args('reset'));
+      for (let index = 0; index < 4; index += 1) {
+        await run(args('record', 'code', 'doubao', 'ok'));
+        await run(args('record', 'code', 'minimax', 'fail'));
+      }
+      const topAfterEvidence = await run(args('code', '--top'));
+      const ranking = await run(args('code'));
+
+      await run(args('reset', 'code'));
+      const cold = await run(args('code'));
+
+      await run(args('reset'));
+      for (let index = 0; index < 5; index += 1) await run(args('record', 'code', 'claude', 'ok'));
+      const unlisted = await run(args('code'));
+
+      await run(args('reset'));
+      await run(args('record', 'logic', 'kimi', 'needsfix'));
+      await run(args('record', 'logic', 'kimi', '1'));
+      const statsOut = await run(args('stats', 'logic'));
+      const badResult = await run(args('record', 'code', 'doubao', 'bogus'));
+      const unknownRecord = await run(args('record', 'noSuchType', 'cc-someagent', 'ok'));
+
+      expect(topAfterEvidence.out.trim()).toBe('doubao');
+      expect(ranking.out).toContain('minimax');
+      expect(cold.out.trim()).toBe('minimax,doubao,glm');
+      expect(unlisted.out).toContain('claude');
+      expect(statsOut.out).toContain('score');
+      expect(statsOut.out).toContain('kimi');
+      expect(statsOut.out).toContain('1/1');
+      expect(badResult.code).toBe(2);
+      expect(unknownRecord.code).toBe(0);
+      expect(unknownRecord.err).toContain('not in bench table');
+    });
+
+    it('feeds explicit tuples and ledger rows back into routing stats', async () => {
+      await run(args('reset'));
+      const explicit = await run(
+        args('feed', 'code:cc-zeta:ok', 'code:cc-zeta:ok', 'logic:cc-omega:fail'),
+      );
+      const codeStats = await run(args('stats', 'code'));
+      const logicStats = await run(args('stats', 'logic'));
+      const badTuple = await run(args('feed', 'badtuple'));
+
+      await run(args('reset'));
+      await writeFile(ledger, 'code\tcc-doubao\nsql\tcc-glm\ncode\tcc-zeta\n', 'utf8');
+      const ledgerFeed = await run(
+        args('feed', '--from-ledger', '--result', 'ok', '--fail', 'cc-zeta'),
+      );
+      const ledgerCodeStats = await run(args('stats', 'code'));
+      const ledgerSqlStats = await run(args('stats', 'sql'));
+      const ledgerContent = await readFile(ledger, 'utf8');
+
+      await writeFile(ledger, 'code\tcc-zeta\n', 'utf8');
+      await run(args('feed', '--from-ledger', '--result', 'ok', '--keep'));
+      const keptLedger = await readFile(ledger, 'utf8');
+      const alternateLedger = join(dir, 'alternate-ledger.tsv');
+      await writeFile(ledger, 'default\tcc-default\n', 'utf8');
+      await writeFile(alternateLedger, 'docs\tcc-glm\n', 'utf8');
+      await run(args('feed', '--from-ledger', '--ledger', alternateLedger, '--result', 'ok'));
+      const defaultLedgerAfterAlternate = await readFile(ledger, 'utf8');
+      const alternateLedgerAfterFeed = await readFile(alternateLedger, 'utf8');
+      const missingResult = await run(args('feed', '--from-ledger'));
+
+      expect(explicit.out).toContain('recorded 3');
+      expect(codeStats.out).toContain('zeta');
+      expect(codeStats.out).toContain('2/0');
+      expect(logicStats.out).toContain('omega');
+      expect(logicStats.out).toContain('0/1');
+      expect(badTuple.code).toBe(2);
+      expect(ledgerFeed.out).toContain('recorded 3');
+      expect(ledgerCodeStats.out).toContain('doubao');
+      expect(ledgerCodeStats.out).toContain('1/0');
+      expect(ledgerCodeStats.out).toContain('zeta');
+      expect(ledgerCodeStats.out).toContain('0/1');
+      expect(ledgerSqlStats.out).toContain('glm');
+      expect(ledgerSqlStats.out).toContain('1/0');
+      expect(ledgerContent).toBe('');
+      expect(keptLedger).toContain('cc-zeta');
+      expect(defaultLedgerAfterAlternate).toContain('cc-default');
+      expect(alternateLedgerAfterFeed).toBe('');
+      expect(missingResult.code).toBe(2);
+    });
+
+    it('samples reproducibly with a seed and decays stale stats', async () => {
+      await run(args('reset'));
+      const greedy = await run(args('code'));
+      process.env.FUGUE_ALLOCATE_SEED = '5';
+      const sampled1 = await run(args('code', '--sample'));
+      process.env.FUGUE_ALLOCATE_SEED = '5';
+      const sampled2 = await run(args('code', '--sample'));
+      const distinct = new Set<string>();
+      for (let seed = 1; seed <= 20; seed += 1) {
+        process.env.FUGUE_ALLOCATE_SEED = String(seed);
+        distinct.add((await run(args('code', '--sample', '--top'))).out.trim());
+      }
+      delete process.env.FUGUE_ALLOCATE_SEED;
+
+      await run(args('reset'));
+      for (let index = 0; index < 4; index += 1) await run(args('record', 'code', 'doubao', 'ok'));
+      await run(args('decay', '--gamma', '0.5'));
+      const decayed = await run(args('stats', 'code'));
+      const badHigh = await run(args('decay', '--gamma', '1.5'));
+      const badZero = await run(args('decay', '--gamma', '0'));
+
+      await run(args('reset'));
+      await run(args('record', 'code', 'doubao', 'ok'));
+      await run(args('record', 'code', 'doubao', 'ok'));
+      await run(args('record', 'sql', 'glm', 'ok'));
+      await run(args('record', 'sql', 'glm', 'ok'));
+      await run(args('decay', '--gamma', '0.5', '--type', 'code'));
+      const codeOnly = await run(args('stats', 'code'));
+      const sqlUntouched = await run(args('stats', 'sql'));
+
+      expect(greedy.out.trim()).toBe('minimax,doubao,glm');
+      expect(sampled1.out).toBe(sampled2.out);
+      expect(sampled1.out).toContain('minimax');
+      expect(distinct.size).toBeGreaterThanOrEqual(2);
+      expect(decayed.out).toContain('doubao');
+      expect(decayed.out).toContain('2/0');
+      expect(badHigh.code).toBe(2);
+      expect(badZero.code).toBe(2);
+      expect(codeOnly.out).toContain('1/0');
+      expect(sqlUntouched.out).toContain('2/0');
+    });
+  });
+
   describe('loop command', () => {
     let dir: string;
     let cache: string;
