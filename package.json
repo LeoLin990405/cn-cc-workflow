@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Chinese-model multi-agent coding workflow: backends + fuguectl + fugue-cc runtime + bounded review-fix loop",
+  "description": "Multi-runtime agent coding workflow: fuguectl + typed engine + bounded review-fix loop",
   "license": "Apache-2.0",
   "author": "BicaMind Labs",
   "homepage": "https://github.com/BicaMindLabs/open-sakanafugu",

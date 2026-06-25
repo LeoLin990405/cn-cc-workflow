@@ -6,14 +6,14 @@ This doc is the **stable contract** downstream depends on.
 
 ## What downstream gets
 
-| Capability                     | Interface                                                             | Notes                                                                             |
-| ------------------------------ | --------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Backends (Chinese-model fleet) | `cc-*` launchers (`cc-deepseek` `cc-glm` …) on `$PATH`                | installed via `./backends/install.sh`; keys in `~/.config/cc-model-secrets.env`   |
-| Harness-agnostic dispatch      | `fuguectl dispatch <target> --harness fugue-cc\|codex\|opencode` | one call dispatches an implementer on any supported harness |
-| Bench-driven model choice      | `fuguectl allocate <task-type> [--top]`                               | task-type → recommended model                                                     |
-| Result cache + join barrier  | `fuguectl cache …`                                                    | dispatch N ⇒ return N before next round                                           |
-| Fleet lifecycle                | `fuguectl fleet status\|up\|down`                                     | strips `CLAUDE_CODE_*` + detached tmux / pty.fork                                 |
-| Preflight gate                 | `fuguectl preflight`                                                  | deps · provider mount/config sanity · **no-Gemini guard**                         |
+| Capability                  | Interface                                                        | Notes                                                                        |
+| --------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Runtime profiles            | `cc-*` launchers, Codex models, OpenCode provider/model targets  | `AgentRegistry` maps logical ids to harness-native targets                   |
+| Harness-agnostic dispatch   | `fuguectl dispatch <target> --harness fugue-cc\|codex\|opencode` | one call dispatches an implementer on any supported harness                  |
+| Bench-driven model choice   | `fuguectl allocate <task-type> [--top]`                          | task-type → recommended model                                                |
+| Result cache + join barrier | `fuguectl cache …`                                               | dispatch N ⇒ return N before next round                                      |
+| Fleet lifecycle             | `fuguectl fleet status\|up\|down`                                | strips `CLAUDE_CODE_*` + detached tmux / pty.fork for the `fugue-cc` runtime |
+| Preflight gate              | `fuguectl preflight`                                             | deps · provider mount/config sanity · **no-Gemini guard**                    |
 
 All of the above are plain bash on `$PATH` (install the skill or add `orchestration/fuguectl/` to `$PATH`) — language-agnostic, callable from a Node/Go/Python framework via `child_process`/`exec`.
 

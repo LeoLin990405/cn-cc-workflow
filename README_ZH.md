@@ -17,6 +17,7 @@
 
 <p align="center">
   <a href="#快速开始">快速开始</a> ·
+  <a href="docs/AGENT_RUNTIME.md">Agent Runtime</a> ·
   <a href="docs/WORKFLOW.md">工作流</a> ·
   <a href="docs/SELF_HARNESS.md">Self-Harness</a> ·
   <a href="docs/PARITY.md">Engine 迁移</a> ·
@@ -30,6 +31,7 @@
 ## 亮点
 
 - **一个操作面** - `fuguectl` 驱动 preflight、dispatch、cache、integration、review、loop state、routing、skills 和 runtime maintenance。
+- **Agent runtime 中立** - 逻辑 agent profile 可以把任务路由到 Claude Code provider instance、Codex model、OpenCode provider，或未来新增的 harness，而 loop 不变。
 - **真实隔离** - worker 在独立 worktree 中编辑，配合 scoped workspace、按需 skills 和 ownership enforcement。
 - **审查保持独立** - implementer 写代码，Codex 或另一个配置好的非 Gemini reviewer 给出 `ACCEPTED` / `NEEDS FIX`。
 - **输出不会丢** - 每个派发任务都先落 cache；join barrier 强制“派出 N 个，收回 N 个”。
@@ -58,7 +60,9 @@ mkdir -p ~/.config
 $EDITOR ~/.config/cc-model-secrets.env
 ```
 
-完整 `fugue-cc` fleet 需要把 provider config 放到实际要编辑的项目里：
+先选择你要使用的 runtime。TypeScript engine 现在把 agent 建模成 profile：逻辑 id、harness（`fugue-cc` / `codex` / `opencode`）、可选的 harness-native target，以及供 policy 判断的 model family。详见 [docs/AGENT_RUNTIME.md](docs/AGENT_RUNTIME.md)。
+
+可选的 `fugue-cc` worktree fleet 需要把 provider config 放到实际要编辑的项目里：
 
 ```bash
 cp orchestration/fugue-cc/provider.config.example /path/to/project/.fugue-cc/provider.config
@@ -73,13 +77,13 @@ fugue-cc
 /path/to/fugue/orchestration/fuguectl/fuguectl fleet status
 ```
 
-## Claude Code Skill
+## Operator Skill
 
 ```bash
 make install-skill
 ```
 
-这会把 `/fugue` 安装到 `~/.claude/skills/fugue`。重启 Claude Code 后，用 `/fugue` 唤醒，或直接描述一个多 agent 编码任务。安装后可冒烟测试：
+这会把 `/fugue` 安装到 `~/.claude/skills/fugue`，作为 Claude Code 的便捷 operator 入口。但 workflow 本身不绑定 Claude Code：Codex、OpenCode 和其他 agent 也可以读取 [AGENTS.md](AGENTS.md)，并通过同一套 agent profiles 派发。安装后可冒烟测试：
 
 ```bash
 ~/.claude/skills/fugue/fuguectl selftest
@@ -97,14 +101,14 @@ fuguectl loop record --verdict NEEDS_FIX --round 1
 fuguectl loop decide
 ```
 
-| 阶段 | fugue 做什么 |
-| --- | --- |
-| Plan | 运行 preflight，创建 TASK 文件，划分 ownership，选择 worker。 |
-| Dispatch | 通过 `fuguectl dispatch` 发送 scoped prompts。 |
-| Gather | 缓存每个终态结果，并等待 join barrier。 |
+| 阶段      | fugue 做什么                                                                  |
+| --------- | ----------------------------------------------------------------------------- |
+| Plan      | 运行 preflight，创建 TASK 文件，划分 ownership，选择 worker。                 |
+| Dispatch  | 通过 `fuguectl dispatch` 发送 scoped prompts。                                |
+| Gather    | 缓存每个终态结果，并等待 join barrier。                                       |
 | Integrate | 把通过审查的 worktree cherry-pick 到 `main`；隔离冲突和 ownership violation。 |
-| Review | 请求独立 reviewer 给出 `ACCEPTED` / `NEEDS FIX` verdict。 |
-| Repair | 用有界 loop 状态机直到 accepted 或 escalated。 |
+| Review    | 请求独立 reviewer 给出 `ACCEPTED` / `NEEDS FIX` verdict。                     |
+| Repair    | 用有界 loop 状态机直到 accepted 或 escalated。                                |
 
 完整流程见 [docs/WORKFLOW.md](docs/WORKFLOW.md)。
 
@@ -112,18 +116,18 @@ fuguectl loop decide
 
 `orchestration/fuguectl/fuguectl` 是生产操作入口。当前有 18 个子命令和 18 套测试。
 
-| 区域 | 命令 |
-| --- | --- |
-| Setup and recon | `fuguectl doctor`、`fuguectl preflight`、`fuguectl fleet status\|up\|down` |
-| Planning | `fuguectl task new\|log\|done`、`fuguectl template <name>`、`fuguectl plan "<goal>"`、`fuguectl goal template\|show\|check` |
-| Routing and context | `fuguectl allocate <type>`、`fuguectl workspace list\|show\|model\|context`、`fuguectl skills index\|list\|match\|show\|inject\|validate\|forge` |
-| Dispatch and gather | `fuguectl dispatch <target>`、`fuguectl cache init\|put\|fail\|barrier\|collect\|resume` |
-| Integration and loop | `fuguectl integrate --work <repo>`、`fuguectl loop init\|record\|decide\|status`、`fuguectl run set\|round\|status\|next\|clear`、`fuguectl summary <round>` |
-| Memory and maintenance | `fuguectl experience add\|list\|recall\|show`、`fuguectl runtime check\|adapt`、`fuguectl selftest` |
+| 区域                   | 命令                                                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Setup and recon        | `fuguectl doctor`、`fuguectl preflight`、`fuguectl fleet status\|up\|down`                                                                                   |
+| Planning               | `fuguectl task new\|log\|done`、`fuguectl template <name>`、`fuguectl plan "<goal>"`、`fuguectl goal template\|show\|check`                                  |
+| Routing and context    | `fuguectl allocate <type>`、`fuguectl workspace list\|show\|model\|context`、`fuguectl skills index\|list\|match\|show\|inject\|validate\|forge`             |
+| Dispatch and gather    | `fuguectl dispatch <target>`、`fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                     |
+| Integration and loop   | `fuguectl integrate --work <repo>`、`fuguectl loop init\|record\|decide\|status`、`fuguectl run set\|round\|status\|next\|clear`、`fuguectl summary <round>` |
+| Memory and maintenance | `fuguectl experience add\|list\|recall\|show`、`fuguectl runtime check\|adapt`、`fuguectl selftest`                                                          |
 
 ## TypeScript Engine
 
-`engine/` 是 typed 实现：严格 TypeScript、ports-and-adapters 分层、纯 domain policy，以及真实 harness / storage adapters。
+`engine/` 是 typed 实现：严格 TypeScript、ports-and-adapters 分层、纯 domain policy，以及真实 harness / storage adapters。`AgentRegistry` 是从 shell-only 编排走向 engine-native 编排的一步：coordinator 能在同一轮里把逻辑 agent id 解析到 `fugue-cc`、Codex 和 OpenCode runtime profile。
 
 ```bash
 cd engine
@@ -164,18 +168,18 @@ node dist/cli/main.js self-harness run \
 
 ## 仓库地图
 
-| 路径 | 内容 |
-| --- | --- |
-| `backends/bin/` | 模型启动器、registry、`cc-models` 和 `cc-sync`。 |
-| `backends/{install,verify}.sh` | 本地安装和 launcher 验证。 |
-| `orchestration/fuguectl/` | `fuguectl`、shell libraries、templates、workspaces、skill bundle 和测试。 |
-| `orchestration/fugue-cc/` | runtime bridge 使用的脱敏 provider 配置模板。 |
-| `orchestration/cn-plugin/` | Claude Code `/cn:*` 插件和 dispatch agent。 |
-| `orchestration/agent-team/` | 更高层多模型规划示例。 |
-| `engine/` | TypeScript package、domain ports、adapters、CLI 和 Self-Harness loop。 |
-| `scripts/` | 密钥扫描、shell lint、docs drift check 和 skill installer。 |
-| `docs/` | Workflow、architecture、parity、integrations 和 Self-Harness 指南。 |
-| `AGENTS.md` | Claude Code、Codex、OpenCode 都可读取的跨 harness 操作入口。 |
+| 路径                           | 内容                                                                               |
+| ------------------------------ | ---------------------------------------------------------------------------------- |
+| `backends/bin/`                | 模型启动器、registry、`cc-models` 和 `cc-sync`。                                   |
+| `backends/{install,verify}.sh` | 本地安装和 launcher 验证。                                                         |
+| `orchestration/fuguectl/`      | `fuguectl`、shell libraries、templates、workspaces、skill bundle 和测试。          |
+| `orchestration/fugue-cc/`      | runtime bridge 使用的脱敏 provider 配置模板。                                      |
+| `orchestration/cn-plugin/`     | Claude Code `/cn:*` 插件和 dispatch agent。                                        |
+| `orchestration/agent-team/`    | 更高层多模型规划示例。                                                             |
+| `engine/`                      | TypeScript package、domain ports、adapters、CLI 和 Self-Harness loop。             |
+| `scripts/`                     | 密钥扫描、shell lint、docs drift check 和 skill installer。                        |
+| `docs/`                        | Agent runtime、workflow、architecture、parity、integrations 和 Self-Harness 指南。 |
+| `AGENTS.md`                    | Claude Code、Codex、OpenCode 都可读取的跨 harness 操作入口。                       |
 
 ## 安全模型
 

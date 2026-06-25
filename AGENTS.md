@@ -1,6 +1,6 @@
 # AGENTS.md — fugue
 
-Cross-harness entry for any coding agent (**Claude Code / Codex / OpenCode** all read this file). This repo is a multi-agent coding workflow driven by one harness-agnostic bash CLI — so the same workflow runs no matter which agent you are.
+Cross-harness entry for any coding agent (**Claude Code / Codex / OpenCode** all read this file). This repo is a multi-agent coding workflow driven by a stable `fuguectl` operator surface and a typed engine registry, so the same loop runs no matter which agent or runtime you are using.
 
 ## One entry point
 
@@ -8,7 +8,7 @@ Cross-harness entry for any coding agent (**Claude Code / Codex / OpenCode** all
 orchestration/fuguectl/fuguectl help
 ```
 
-Unified driver (18 subcommands): `doctor` · `fleet` · `preflight` · `task` · `template` · `dispatch` · `cache` · `integrate` · `allocate` · `skills` · `workspace` · `experience` · `plan` · `goal` · `loop` · `run` · `summary` · `runtime`. Every subcommand is plain bash — callable from any shell / harness.
+Unified driver (18 subcommands): `doctor` · `fleet` · `preflight` · `task` · `template` · `dispatch` · `cache` · `integrate` · `allocate` · `skills` · `workspace` · `experience` · `plan` · `goal` · `loop` · `run` · `summary` · `runtime`. The production driver remains shell-callable from any harness; new orchestration primitives move into the strict TypeScript engine first, then get thin CLI wrappers.
 
 ## The workflow (5 phases)
 
@@ -22,11 +22,11 @@ The implementer backend is selected by `--harness`:
 fuguectl dispatch <target> --harness fugue-cc|codex|opencode [--workspace ws] [--template impl --set ...]
 ```
 
-| harness              | runs                                                                 | `<target>` is                                |
-| -------------------- | -------------------------------------------------------------------- | -------------------------------------------- |
-| `fugue-cc` (default) | Claude Code instances — the `cc-*` Chinese-model fleet, via provider | a fugue-cc agent (e.g. `cc-deepseek`)        |
-| `codex`              | `codex exec`                                                         | a Codex model (e.g. `gpt-5.5`)               |
-| `opencode`           | `opencode run`                                                       | `provider/model` (e.g. `doubao/doubao-code`) |
+| harness              | runs                                                  | `<target>` is                                |
+| -------------------- | ----------------------------------------------------- | -------------------------------------------- |
+| `fugue-cc` (default) | provider-backed Claude Code runtime profiles (`cc-*`) | a fugue-cc agent (e.g. `cc-deepseek`)        |
+| `codex`              | `codex exec`                                          | a Codex model (e.g. `gpt-5.5`)               |
+| `opencode`           | `opencode run`                                        | `provider/model` (e.g. `doubao/doubao-code`) |
 
 Reviewer (`coder`) and planner are likewise harness-agnostic.
 

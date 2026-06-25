@@ -43,9 +43,7 @@ export const recommend = (report: DoctorReport): readonly string[] => {
   }
 
   if (!codex) {
-    recs.push(
-      'no Codex (reviewer): use a strong Chinese-model backend as reviewer — do not use Gemini',
-    );
+    recs.push('no Codex (reviewer): use a strong non-Gemini backend as reviewer');
   }
   if (!hasRole(report, 'claude')) {
     recs.push('no claude (executor): install @anthropic-ai/claude-code first');

@@ -53,4 +53,56 @@ describe('wireCoordinator', () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it('routes registry-backed agents to non-default harnesses', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'fugue-wire-registry-'));
+    const binDir = join(dir, 'bin');
+    const calls = join(dir, 'calls.txt');
+    const codex = join(binDir, 'codex');
+    const oldPath = process.env.PATH;
+    const oldCalls = process.env.FUGUE_WIRE_CALLS;
+
+    try {
+      await mkdir(binDir);
+      await writeFile(
+        codex,
+        [
+          '#!/bin/sh',
+          'printf "%s\\n" "$*" > "$FUGUE_WIRE_CALLS"',
+          'printf "codex stub\\n"',
+          '',
+        ].join('\n'),
+      );
+      await chmod(codex, 0o755);
+
+      process.env.PATH = `${binDir}${delimiter}${oldPath ?? ''}`;
+      process.env.FUGUE_WIRE_CALLS = calls;
+
+      const coordinator = wireCoordinator({
+        stateDir: join(dir, 'state'),
+        agentRegistry: {
+          agents: [
+            {
+              id: 'coder',
+              harness: 'codex',
+              target: 'gpt-5.5',
+              modelFamily: 'openai',
+            },
+          ],
+        },
+      });
+      const report = await coordinator.dispatchRound('run-1', 1, [
+        { key: 't1', taskType: 'review', prompt: 'review it', agent: 'coder' },
+      ]);
+
+      expect(report.status).toBe('completed');
+      expect(await readFile(calls, 'utf8')).toBe('exec --model gpt-5.5 review it\n');
+    } finally {
+      if (oldPath === undefined) delete process.env.PATH;
+      else process.env.PATH = oldPath;
+      if (oldCalls === undefined) delete process.env.FUGUE_WIRE_CALLS;
+      else process.env.FUGUE_WIRE_CALLS = oldCalls;
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });

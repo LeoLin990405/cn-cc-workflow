@@ -7,13 +7,13 @@ Four roles, seven phases — fully replayable, interruptible, and auditable.
 
 ## Roles
 
-| Layer                  | Who                                                                                   | Does                                                                      | Does not do                                                                                                |
-| ---------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Strategy / Planner     | **Claude Desktop** (Opus, 1M)                                                         | Write requirements, split tasks, set acceptance criteria                  | Does not enter the provider pane, does not write implementation code                                       |
-| Execution + Supervisor | **Claude Code** (fuguectl skill)                                                        | Dispatch clones, integrate, run the quality gate, run tests, log the TASK | Does not hand-write large blocks of implementation (except Phase 5 patches)                                |
-| Implementers           | **9 Chinese-model CC clones** (`fugue-cc` fleet)                              | Write subtasks each in their own worktree                                 | Do not read each other's code, do not touch the main branch                                                |
-| Frontend (opt-in)      | **Antigravity (`agy` CLI)**                                                           | Frontend/UI subtasks, manual IDE or headless `agy --print`                | **Does not enter the Phase 5 loop, never acts as reviewer** (backend = Gemini, honoring no-Gemini)         |
-| Reviewer               | **Codex** (via `fuguectl dispatch --harness codex` or the configured review provider) | Adversarial review, gives VERDICT + Findings                              | Does not write implementation (keeps generation != review independence); the review path never uses Gemini |
+| Layer                  | Who                                                                                            | Does                                                                     | Does not do                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Strategy / Planner     | Human operator or a frontier planning agent                                                    | Write requirements, split tasks, set acceptance criteria                 | Does not enter a worker runtime pane, does not write bulk implementation code                              |
+| Execution + Supervisor | Any operator agent that can run fugue commands: Claude Code, Codex, OpenCode, or a human shell | Dispatch profiles, integrate, run the quality gate, run tests, log TASKs | Does not hand-write large blocks of implementation except focused Phase 5 patches                          |
+| Implementers           | Agent runtime profiles backed by `fugue-cc`, Codex, OpenCode, or future harnesses              | Write subtasks each in their own worktree or scoped runtime              | Do not read each other's code, do not touch the main branch                                                |
+| Frontend (opt-in)      | Frontend-capable implementer profile such as Antigravity (`agy` CLI), when policy permits      | Frontend/UI subtasks, manual IDE or headless `agy --print`               | **Does not enter the Phase 5 loop, never acts as reviewer** (backend = Gemini, honoring no-Gemini)         |
+| Reviewer               | Independent review profile, usually Codex or another configured non-Gemini reviewer            | Adversarial review, gives VERDICT + Findings                             | Does not write implementation (keeps generation != review independence); the review path never uses Gemini |
 
 > The maintenance layer **cc-sync** is not on the request path; it is a background launchd daemon: CC upgrade tracking + model refresh + monthly rebuild.
 
@@ -23,23 +23,23 @@ Four roles, seven phases — fully replayable, interruptible, and auditable.
 
 ### Phase 0 — Open the Task (Planner)
 
-Claude Desktop writes the requirement into a task file `~/.claude/tasks/TASK-YYYY-MM-DD-NNN.md`: requirements / subtasks (annotated with which AI is assigned) / acceptance criteria / output files. This is the single source of intent for the whole pipeline.
+The planner writes the requirement into a task file such as `~/.claude/tasks/TASK-YYYY-MM-DD-NNN.md`: requirements / subtasks (annotated with the logical agent profile) / acceptance criteria / output files. This is the single source of intent for the whole pipeline.
 
 ### Phase 1 — Split and Assign (fuguectl)
 
-Claude Code reads the task, splits it into parallelizable subtasks, and picks backends by the decision tree:
+The operator reads the task, splits it into parallelizable subtasks, and picks logical agent profiles by the decision tree:
 
-- Chinese-language scenario / domestic API / SQL -> Chinese-model clone (doubao/qwen/glm/kimi...)
-- English / algorithms / refactoring -> coder(Codex) or a strong-reasoning clone (deepseek/minimax)
+- Chinese-language scenario / domestic API / SQL -> Chinese-model profile (doubao/qwen/glm/kimi...)
+- English / algorithms / refactoring -> Codex or a strong-reasoning profile (deepseek/minimax)
 - Math and logic -> stepfun
 - One subtask = one independent, copy-ready prompt (**no broadcasting a single generic prompt to everyone**).
 
 ### Phase 2 — Parallel Implementation + Cache + join barrier (Implementers)
 
-After the `fugue-cc` provider is mounted (`fuguectl fleet status`):
+After the selected runtimes pass preflight (`fuguectl doctor`, `fuguectl preflight`, and `fuguectl fleet status` when using the `fugue-cc` worktree fleet):
 
 1. **Open this round's cache**: `fuguectl cache init <round> t1:cc-deepseek t2:cc-glm t3:agy ...` — declare the N tasks dispatched this round (the parallel dispatch manifest).
-2. **Dispatch**: `fuguectl dispatch <agent> --harness fugue-cc --prompt-file <prompt>`; each clone edits in its own worktree.
+2. **Dispatch**: `fuguectl dispatch <agent> --harness fugue-cc|codex|opencode --prompt-file <prompt>` or use an engine `AgentRegistry` so the coordinator resolves the harness from the logical profile; each implementer edits in its own worktree or scoped runtime.
 3. **Results land in the cache first**: each agent's output goes to `fuguectl cache put <round> <task_id> <file>` (dead/timed-out -> `fail`, which also counts as "returned"). **Never read from volatile chat/scrollback.**
 4. **join barrier (hard gate)**: `fuguectl cache barrier <round> --wait 600` — **if N were dispatched, N must come back** (all terminal) for exit 0; otherwise Phase 3 is not allowed. Stuck tasks surface here and are never silently dropped.
 
@@ -47,13 +47,13 @@ After the `fugue-cc` provider is mounted (`fuguectl fleet status`):
 
 ### Phase 3 — Integration (fuguectl)
 
-Once the barrier passes (all N returned), Claude Code pulls outputs from the cache (`fuguectl cache collect <round>`) + cherry-picks each clone's worktree changes onto the main working branch,
+Once the barrier passes (all N returned), the operator pulls outputs from the cache (`fuguectl cache collect <round>`) + cherry-picks each implementer's worktree changes onto the main working branch,
 resolves conflicts, unifies style, and runs a local sanity baseline (build/test/lint).
 
 ### Phase 4 — Review (Reviewer)
 
-`fuguectl dispatch gpt-5.5 --harness codex --prompt-file <review-prompt>` -> Codex gives a `VERDICT` (ACCEPTED / NEEDS FIX) + `Findings`.
-Generation != review: implementation is by Chinese-model clones, review is by Codex — cross-vendor and independent.
+`fuguectl dispatch gpt-5.5 --harness codex --prompt-file <review-prompt>` or a registry-backed reviewer profile gives a `VERDICT` (ACCEPTED / NEEDS FIX) + `Findings`.
+Generation != review: implementation and review must resolve to different model families and the review path stays non-Gemini.
 
 ### Phase 5 — Review-Fix Loop (bounded closed loop, upgraded per 2026-06 loop engineering research)
 
@@ -63,7 +63,7 @@ Automatically iterate **fix -> re-review** until it passes review, with a capped
 2. **Codex subjective review (incremental)** — from round 2 on, review only this round's diff (saves tokens + stays focused).
 3. **keep-best anti-regression** — if a round is worse than the previous one / introduces new problems -> `git reset` back to the best version, discarding the bad change (prevents degeneration of thought).
 4. **>=2 confirmation passes** — even after the first ACCEPTED, add one independent confirmation (verification is probabilistic).
-5. **Fix = Claude Edit patch** (v4 hard rule, no bouncing back to the clone for a rewrite) + write each round into the TASK file for the audit trail.
+5. **Fix = operator patch** (v4 hard rule, no bouncing back to the implementer for a rewrite) + write each round into the TASK file for the audit trail.
 6. **Three exit states**: ACCEPTED -> DONE / over MAX_ROUNDS(3) -> escalate to a human / **non-converging -> Meta-Reflector** (first reflect on "why it won't fix" with diagnosis + suggestions, then escalate — not a plain retry).
 
 Research basis: 1-2 rounds capture ~75% of the improvement, a hard cap of 5-6 rounds prevents oscillation, generation != review adds ~+20%.
@@ -75,15 +75,15 @@ Review passes -> merge into the main branch, mark the TASK file `DONE`, clean up
 
 ---
 
-## Two Ways to Run
+## Three Ways to Run
 
-|             | Lightweight single-machine (`/cn:*` plugin) | Full multi-agent (`fugue-cc` fleet)                                    |
-| ----------- | ------------------------------------------- | ---------------------------------------------------------------------- |
-| When to use | One or two subtasks, quick validation       | Real parallel dispatch, want the review loop                                     |
-| Startup     | `/cn:team` `/cn:ask` inside Claude Code     | mount provider, then `fuguectl fleet status`                           |
-| Isolation   | Same process, no worktree                   | Each clone gets its own worktree                                       |
-| Review      | Manual                                      | Phase 4-5 automatic loop                                               |
-| Config      | No provider config needed                   | Needs provider config under `.fugue-cc/` (copy `.example`, fill in the key) |
+|             | Lightweight plugin route                | Worktree fleet route                           | Engine registry route                                          |
+| ----------- | --------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| When to use | One or two subtasks, quick validation   | Real parallel dispatch with isolated worktrees | Mixed runtimes in one typed coordinator round                  |
+| Startup     | `/cn:team` `/cn:ask` inside Claude Code | mount provider, then `fuguectl fleet status`   | `wireCoordinator({ agentRegistry })`                           |
+| Isolation   | Same process, no worktree               | Each `fugue-cc` profile gets its own worktree  | Per profile: `fugue-cc`, Codex, OpenCode, or future harness    |
+| Review      | Manual                                  | Phase 4-5 automatic loop                       | Independent reviewer profile, policy checked by model family   |
+| Config      | No provider config needed               | Needs provider config under `.fugue-cc/`       | JSON `AgentRegistry`; see [AGENT_RUNTIME.md](AGENT_RUNTIME.md) |
 
 ---
 

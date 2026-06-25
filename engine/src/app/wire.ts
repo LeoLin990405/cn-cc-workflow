@@ -12,8 +12,9 @@ import { FsResultStore } from '../adapters/store/fs-result-store.js';
 import { FsRunStore } from '../adapters/store/fs-run-store.js';
 import { joinPath } from '../adapters/store/paths.js';
 import { DEFAULT_ALLOCATION_PARAMS, type BenchTable } from '../domain/allocation.js';
+import type { AgentRegistry } from '../domain/agent-registry.js';
 import { DEFAULT_POLICIES } from '../domain/policy-eval.js';
-import type { Harness, HarnessName } from '../domain/ports/harness.js';
+import { HARNESS_NAMES, type Harness, type HarnessName } from '../domain/ports/harness.js';
 import { renderTemplate } from '../domain/prompt-render.js';
 import type { EvalCase, SelfHarnessSpec } from '../domain/self-harness-spec.js';
 import { systemClock } from '../infra/clock.js';
@@ -33,6 +34,8 @@ export interface WireConfig {
   readonly bench?: BenchTable;
   /** Working directory for harness commands. */
   readonly cwd?: string;
+  /** Optional logical-agent registry; enables per-agent harness/runtime routing. */
+  readonly agentRegistry?: AgentRegistry;
 }
 
 export interface WireSelfHarnessConfig {
@@ -53,6 +56,14 @@ const buildHarness = (name: HarnessName, runner: CommandRunner, cwd?: string): H
   }
 };
 
+const buildHarnessMap = (runner: CommandRunner, cwd?: string): ReadonlyMap<HarnessName, Harness> =>
+  new Map(
+    HARNESS_NAMES.map((name): readonly [HarnessName, Harness] => [
+      name,
+      buildHarness(name, runner, cwd),
+    ]),
+  );
+
 /**
  * The single composition root: assemble a Coordinator from the real
  * filesystem/CLI adapters. Nothing else in the codebase `new`s an adapter.
@@ -60,7 +71,11 @@ const buildHarness = (name: HarnessName, runner: CommandRunner, cwd?: string): H
 export const wireCoordinator = (config: WireConfig): Coordinator => {
   const fs = new NodeFileSystem();
   const runner = new NodeCommandRunner();
-  const deps: CoordinatorDeps = {
+  const harnesses = buildHarnessMap(runner, config.cwd);
+  const defaultHarness = harnesses.get(config.harness ?? 'fugue-cc');
+  if (defaultHarness === undefined) throw new Error('default harness was not constructed');
+
+  const baseDeps = {
     policies: DEFAULT_POLICIES,
     allocator: new BetaBernoulliAllocator(
       fs,
@@ -71,13 +86,18 @@ export const wireCoordinator = (config: WireConfig): Coordinator => {
         rng: systemRng,
       },
     ),
-    harness: buildHarness(config.harness ?? 'fugue-cc', runner, config.cwd),
+    harness: defaultHarness,
+    harnesses,
     barrier: new PersistentBarrier(fs, joinPath(config.stateDir, 'barrier')),
     resultStore: new FsResultStore(fs, joinPath(config.stateDir, 'results')),
     runStore: new FsRunStore(fs, joinPath(config.stateDir, 'runs')),
     clock: systemClock,
-    hash: (content) => createHash('sha256').update(content).digest('hex'),
+    hash: (content: string) => createHash('sha256').update(content).digest('hex'),
   };
+  const deps: CoordinatorDeps =
+    config.agentRegistry === undefined
+      ? baseDeps
+      : { ...baseDeps, agentRegistry: config.agentRegistry };
   return new Coordinator(deps);
 };
 

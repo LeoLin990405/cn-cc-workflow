@@ -18,6 +18,7 @@
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> ·
+  <a href="docs/AGENT_RUNTIME.md">Agent Runtime</a> ·
   <a href="docs/WORKFLOW.md">Workflow</a> ·
   <a href="docs/SELF_HARNESS.md">Self-Harness</a> ·
   <a href="docs/PARITY.md">Engine Parity</a> ·
@@ -32,6 +33,9 @@
 
 - **One operator surface** - `fuguectl` drives preflight, dispatch, cache,
   integration, review, loop state, routing, skills, and runtime maintenance.
+- **Runtime-neutral agents** - logical agent profiles route work to Claude Code
+  provider instances, Codex models, OpenCode providers, or future harnesses
+  without changing the loop.
 - **Real isolation** - workers edit separate worktrees with scoped workspaces,
   selected skills, and optional ownership enforcement.
 - **Review stays independent** - implementers write, while Codex or another
@@ -67,8 +71,13 @@ mkdir -p ~/.config
 $EDITOR ~/.config/cc-model-secrets.env
 ```
 
-For a full `fugue-cc` fleet, add a provider config to the project you want the
-fleet to edit:
+Choose the runtimes you want to use. The TypeScript engine now models agents as
+profiles: a logical id, a harness (`fugue-cc`, `codex`, `opencode`), an optional
+harness-native target, and a model family used by policy. See
+[docs/AGENT_RUNTIME.md](docs/AGENT_RUNTIME.md).
+
+For the optional `fugue-cc` worktree fleet, add a provider config to the project
+you want the fleet to edit:
 
 ```bash
 cp orchestration/fugue-cc/provider.config.example /path/to/project/.fugue-cc/provider.config
@@ -83,14 +92,16 @@ Then run the operator from another shell:
 /path/to/fugue/orchestration/fuguectl/fuguectl fleet status
 ```
 
-## Claude Code Skill
+## Operator Skill
 
 ```bash
 make install-skill
 ```
 
-This installs `/fugue` to `~/.claude/skills/fugue`. Restart Claude Code, invoke
-`/fugue`, or describe a multi-agent coding task. Smoke-test the installed bundle:
+This installs `/fugue` to `~/.claude/skills/fugue` as a convenience operator
+entry for Claude Code. The workflow itself is not Claude Code-specific: Codex,
+OpenCode, and other agents can follow [AGENTS.md](AGENTS.md) and dispatch through
+the same agent profiles. Smoke-test the installed bundle:
 
 ```bash
 ~/.claude/skills/fugue/fuguectl selftest
@@ -108,14 +119,14 @@ fuguectl loop record --verdict NEEDS_FIX --round 1
 fuguectl loop decide
 ```
 
-| Phase | What fugue does |
-| --- | --- |
-| Plan | Run preflight, create a TASK file, split ownership, and pick workers. |
-| Dispatch | Send scoped prompts through `fuguectl dispatch`. |
-| Gather | Cache every terminal result and wait at the join barrier. |
+| Phase     | What fugue does                                                                         |
+| --------- | --------------------------------------------------------------------------------------- |
+| Plan      | Run preflight, create a TASK file, split ownership, and pick workers.                   |
+| Dispatch  | Send scoped prompts through `fuguectl dispatch`.                                        |
+| Gather    | Cache every terminal result and wait at the join barrier.                               |
 | Integrate | Cherry-pick reviewed worktrees onto `main`; isolate conflicts and ownership violations. |
-| Review | Ask an independent reviewer for an `ACCEPTED` / `NEEDS FIX` verdict. |
-| Repair | Use the bounded loop state machine until accepted or escalated. |
+| Review    | Ask an independent reviewer for an `ACCEPTED` / `NEEDS FIX` verdict.                    |
+| Repair    | Use the bounded loop state machine until accepted or escalated.                         |
 
 Read the full walkthrough in [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
@@ -124,19 +135,22 @@ Read the full walkthrough in [docs/WORKFLOW.md](docs/WORKFLOW.md).
 `orchestration/fuguectl/fuguectl` is the production operator entry point. It has
 18 subcommands and 18 test suites.
 
-| Area | Commands |
-| --- | --- |
-| Setup and recon | `fuguectl doctor`, `fuguectl preflight`, `fuguectl fleet status\|up\|down` |
-| Planning | `fuguectl task new\|log\|done`, `fuguectl template <name>`, `fuguectl plan "<goal>"`, `fuguectl goal template\|show\|check` |
-| Routing and context | `fuguectl allocate <type>`, `fuguectl workspace list\|show\|model\|context`, `fuguectl skills index\|list\|match\|show\|inject\|validate\|forge` |
-| Dispatch and gather | `fuguectl dispatch <target>`, `fuguectl cache init\|put\|fail\|barrier\|collect\|resume` |
-| Integration and loop | `fuguectl integrate --work <repo>`, `fuguectl loop init\|record\|decide\|status`, `fuguectl run set\|round\|status\|next\|clear`, `fuguectl summary <round>` |
-| Memory and maintenance | `fuguectl experience add\|list\|recall\|show`, `fuguectl runtime check\|adapt`, `fuguectl selftest` |
+| Area                   | Commands                                                                                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Setup and recon        | `fuguectl doctor`, `fuguectl preflight`, `fuguectl fleet status\|up\|down`                                                                                   |
+| Planning               | `fuguectl task new\|log\|done`, `fuguectl template <name>`, `fuguectl plan "<goal>"`, `fuguectl goal template\|show\|check`                                  |
+| Routing and context    | `fuguectl allocate <type>`, `fuguectl workspace list\|show\|model\|context`, `fuguectl skills index\|list\|match\|show\|inject\|validate\|forge`             |
+| Dispatch and gather    | `fuguectl dispatch <target>`, `fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                     |
+| Integration and loop   | `fuguectl integrate --work <repo>`, `fuguectl loop init\|record\|decide\|status`, `fuguectl run set\|round\|status\|next\|clear`, `fuguectl summary <round>` |
+| Memory and maintenance | `fuguectl experience add\|list\|recall\|show`, `fuguectl runtime check\|adapt`, `fuguectl selftest`                                                          |
 
 ## TypeScript Engine
 
 `engine/` is the typed implementation: strict TypeScript, ports-and-adapters
 layering, pure domain policy, and real harness/storage adapters.
+`AgentRegistry` is the engine-native step away from shell-only orchestration:
+the coordinator can dispatch one round across `fugue-cc`, Codex, and OpenCode
+by resolving logical agent ids to runtime profiles.
 
 ```bash
 cd engine
@@ -181,18 +195,18 @@ The strict JSON spec, editable surfaces, validation rules, and smoke tests are i
 
 ## Repository Map
 
-| Path | Contents |
-| --- | --- |
-| `backends/bin/` | Model launchers, registry, `cc-models`, and `cc-sync`. |
-| `backends/{install,verify}.sh` | Local install and launcher verification. |
-| `orchestration/fuguectl/` | `fuguectl`, shell libraries, templates, workspaces, skill bundle, and tests. |
-| `orchestration/fugue-cc/` | Sanitized provider configuration template for the runtime bridge. |
-| `orchestration/cn-plugin/` | Claude Code `/cn:*` plugin and dispatch agent. |
-| `orchestration/agent-team/` | Higher-level multi-model planning example. |
-| `engine/` | TypeScript package, domain ports, adapters, CLI, and Self-Harness loop. |
-| `scripts/` | Secret scan, shell lint, docs drift check, and skill installer. |
-| `docs/` | Workflow, architecture, parity, integrations, and Self-Harness guide. |
-| `AGENTS.md` | Cross-harness operator entry read by Claude Code, Codex, and OpenCode. |
+| Path                           | Contents                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| `backends/bin/`                | Model launchers, registry, `cc-models`, and `cc-sync`.                               |
+| `backends/{install,verify}.sh` | Local install and launcher verification.                                             |
+| `orchestration/fuguectl/`      | `fuguectl`, shell libraries, templates, workspaces, skill bundle, and tests.         |
+| `orchestration/fugue-cc/`      | Sanitized provider configuration template for the runtime bridge.                    |
+| `orchestration/cn-plugin/`     | Claude Code `/cn:*` plugin and dispatch agent.                                       |
+| `orchestration/agent-team/`    | Higher-level multi-model planning example.                                           |
+| `engine/`                      | TypeScript package, domain ports, adapters, CLI, and Self-Harness loop.              |
+| `scripts/`                     | Secret scan, shell lint, docs drift check, and skill installer.                      |
+| `docs/`                        | Agent runtime, workflow, architecture, parity, integrations, and Self-Harness guide. |
+| `AGENTS.md`                    | Cross-harness operator entry read by Claude Code, Codex, and OpenCode.               |
 
 ## Safety Model
 

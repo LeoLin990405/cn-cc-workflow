@@ -37,6 +37,17 @@ export type {
   AllocationParams,
 } from './domain/allocation.js';
 export { DEFAULT_ALLOCATION_PARAMS, UNLISTED_RANK } from './domain/allocation.js';
+export type { AgentProfile, AgentRegistry, AgentRole } from './domain/agent-registry.js';
+export {
+  AGENT_ROLES,
+  parseAgentRegistryJson,
+  renderAgentRegistryTemplate,
+  findAgentProfile,
+  resolveAgentTarget,
+  agentHasRole,
+  agentsForRole,
+  agentPolicyLabel,
+} from './domain/agent-registry.js';
 export type { GateSeverity, GateCheck, GateResult } from './domain/gate.js';
 export { isGo, failures, warnings, mergeGates } from './domain/gate.js';
 export type { Selection, PolicyViolation, PolicyResult, Policy } from './domain/policy.js';

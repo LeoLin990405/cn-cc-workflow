@@ -10,7 +10,7 @@ import type {
 import type { Artifact } from '../domain/artifact.js';
 import type { AllocationStrategy } from '../domain/ports/allocation-strategy.js';
 import type { Barrier } from '../domain/ports/barrier.js';
-import type { Harness } from '../domain/ports/harness.js';
+import type { Harness, HarnessName } from '../domain/ports/harness.js';
 import type { ResultStore } from '../domain/ports/result-store.js';
 import type { RunStore } from '../domain/ports/run-store.js';
 import { DEFAULT_POLICIES } from '../domain/policy-eval.js';
@@ -24,10 +24,14 @@ import { Coordinator, type CoordinatorDeps, type DispatchTask } from './coordina
 
 // ── minimal in-test fakes (app tests may not import infra/adapters) ──
 class FakeHarness implements Harness {
-  readonly name = 'fugue-cc';
+  readonly requests: DispatchRequest[] = [];
   readonly dispatched: string[] = [];
-  constructor(private readonly failAgents: ReadonlySet<string> = new Set()) {}
+  constructor(
+    private readonly failAgents: ReadonlySet<string> = new Set(),
+    readonly name: HarnessName = 'fugue-cc',
+  ) {}
   dispatch(request: DispatchRequest): Promise<Result<DispatchResult, DispatchError>> {
+    this.requests.push(request);
     this.dispatched.push(request.agent);
     return Promise.resolve(
       this.failAgents.has(request.agent)
@@ -178,5 +182,130 @@ describe('Coordinator.dispatchRound', () => {
     await expect(
       new Coordinator(deps()).dispatchRound('run-5', 1, [task('a', 'x'), task('a', 'y')]),
     ).rejects.toThrow(/duplicate task key/u);
+  });
+
+  it('routes registry-backed logical agents to their harness and target', async () => {
+    const fugueCc = new FakeHarness(new Set(), 'fugue-cc');
+    const codex = new FakeHarness(new Set(), 'codex');
+    const report = await new Coordinator(
+      deps({
+        harness: fugueCc,
+        harnesses: new Map<HarnessName, Harness>([
+          ['fugue-cc', fugueCc],
+          ['codex', codex],
+        ]),
+        agentRegistry: {
+          agents: [
+            {
+              id: 'cc-deepseek',
+              harness: 'fugue-cc',
+              modelFamily: 'deepseek',
+              roles: ['implementer'],
+            },
+            {
+              id: 'coder',
+              harness: 'codex',
+              target: 'gpt-5.5',
+              modelFamily: 'openai',
+              roles: ['reviewer', 'implementer'],
+              workspace: 'review',
+            },
+          ],
+        },
+      }),
+    ).dispatchRound('run-6', 1, [task('a', 'cc-deepseek'), task('b', 'coder')]);
+
+    expect(report.status).toBe('completed');
+    expect(fugueCc.dispatched).toEqual(['cc-deepseek']);
+    expect(codex.dispatched).toEqual(['gpt-5.5']);
+    expect(codex.requests.at(0)?.workspace).toBe('review');
+  });
+
+  it('lets allocator choices resolve through the agent registry', async () => {
+    const fugueCc = new FakeHarness(new Set(), 'fugue-cc');
+    const codex = new FakeHarness(new Set(), 'codex');
+    await new Coordinator(
+      deps({
+        harness: fugueCc,
+        harnesses: new Map<HarnessName, Harness>([
+          ['fugue-cc', fugueCc],
+          ['codex', codex],
+        ]),
+        allocator: new FakeAllocator('coder'),
+        agentRegistry: {
+          agents: [
+            {
+              id: 'coder',
+              harness: 'codex',
+              target: 'gpt-5.5',
+              modelFamily: 'openai',
+            },
+          ],
+        },
+      }),
+    ).dispatchRound('run-7', 1, [task('a')]);
+
+    expect(fugueCc.dispatched).toEqual([]);
+    expect(codex.dispatched).toEqual(['gpt-5.5']);
+  });
+
+  it('falls back to the default harness for agents absent from the registry', async () => {
+    const fugueCc = new FakeHarness(new Set(), 'fugue-cc');
+    await new Coordinator(
+      deps({
+        harness: fugueCc,
+        agentRegistry: {
+          agents: [
+            {
+              id: 'coder',
+              harness: 'codex',
+              target: 'gpt-5.5',
+              modelFamily: 'openai',
+            },
+          ],
+        },
+      }),
+    ).dispatchRound('run-8', 1, [task('a', 'legacy-agent')]);
+
+    expect(fugueCc.dispatched).toEqual(['legacy-agent']);
+  });
+
+  it('evaluates policy against registry model families', async () => {
+    const codex = new FakeHarness(new Set(), 'codex');
+    const report = await new Coordinator(
+      deps({
+        harness: codex,
+        harnesses: new Map<HarnessName, Harness>([['codex', codex]]),
+        agentRegistry: {
+          agents: [
+            {
+              id: 'fast-review',
+              harness: 'codex',
+              target: 'model/latest',
+              modelFamily: 'gemini',
+            },
+          ],
+        },
+      }),
+    ).dispatchRound('run-9', 1, [task('a', 'fast-review')]);
+
+    expect(report.status).toBe('no-go');
+    expect(codex.dispatched).toHaveLength(0);
+  });
+
+  it('throws for a registry profile whose harness was not injected', async () => {
+    const fugueCc = new FakeHarness(new Set(), 'fugue-cc');
+
+    await expect(
+      new Coordinator(
+        deps({
+          harness: fugueCc,
+          harnesses: new Map<HarnessName, Harness>([['fugue-cc', fugueCc]]),
+          agentRegistry: {
+            agents: [{ id: 'coder', harness: 'codex', target: 'gpt-5.5' }],
+          },
+        }),
+      ).dispatchRound('run-10', 1, [task('a', 'coder')]),
+    ).rejects.toThrow(/unavailable harness: codex/u);
   });
 });
