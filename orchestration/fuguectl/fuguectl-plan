@@ -1,0 +1,12 @@
+#!/usr/bin/env node
+import { runSimpleBridge } from "./fuguectl-node-bridge.mjs";
+
+runSimpleBridge({
+  argv: process.argv.slice(2),
+  command: "plan",
+  helpOnEmpty: false,
+  help: `fuguectl-plan "<goal>" [--models m1,m2,..] [--out <dir>]
+default models = cc-deepseek,cc-kimi,coder
+default out    = <cache_root>/plans
+`,
+});

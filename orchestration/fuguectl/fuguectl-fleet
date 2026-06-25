@@ -1,0 +1,13 @@
+#!/usr/bin/env node
+import { runSimpleBridge } from "./fuguectl-node-bridge.mjs";
+
+runSimpleBridge({
+  argv: process.argv.slice(2),
+  command: "fleet",
+  help: `fuguectl-fleet — TypeScript fugue-cc fleet lifecycle bridge
+
+status [proj...]              whether each provider daemon is ready
+up [--dry] [--pty] [proj...]  strip CLAUDE_CODE_* + start provider
+down [proj...]                stop provider daemon
+`,
+});

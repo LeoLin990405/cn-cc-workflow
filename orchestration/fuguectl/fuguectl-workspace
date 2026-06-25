@@ -1,0 +1,17 @@
+#!/usr/bin/env node
+import { runSubcommandBridge } from "./fuguectl-node-bridge.mjs";
+
+runSubcommandBridge({
+  argv: process.argv.slice(2),
+  command: "workspace",
+  allowed: ["list", "show", "model", "context"],
+  help: `fuguectl-workspace — TypeScript Workspace commands bridge
+
+list
+show  <name>
+model <name>
+context <name> [--task T]
+`,
+  unknown: (subcommand) =>
+    `fuguectl-workspace: unknown subcommand '${subcommand}' (list|show|model|context)`,
+});

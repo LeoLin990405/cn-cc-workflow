@@ -1,0 +1,10 @@
+#!/usr/bin/env node
+import { runSimpleBridge } from "./fuguectl-node-bridge.mjs";
+
+runSimpleBridge({
+  argv: process.argv.slice(2),
+  command: "summary",
+  help: `fuguectl-summary <round> [--task <file>]
+round observability: cache-status summary table
+`,
+});

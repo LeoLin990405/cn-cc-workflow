@@ -2,7 +2,7 @@
 # fuguectl-workspace.test.sh
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-W="$HERE/fuguectl-workspace.sh"
+W="$HERE/fuguectl-workspace"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export FUGUE_ENGINE_CLI="$TMP/fugue-engine"
 export FUGUE_WORKSPACE_CALLS="$TMP/workspace-calls.txt"
@@ -51,17 +51,17 @@ printf '%s\n' \
 
 echo "fuguectl-workspace tests"
 
-ok "list shows >=6 stations" '[ "$(bash "$W" list | grep -c .)" -ge 6 ]'
-ok "list includes code/review/main" 'o=$(bash "$W" list); [[ "$o" == *"code"* && "$o" == *"review"* && "$o" == *"main"* ]]'
+ok "list shows >=6 stations" '[ "$("$W" list | grep -c .)" -ge 6 ]'
+ok "list includes code/review/main" 'o=$("$W" list); [[ "$o" == *"code"* && "$o" == *"review"* && "$o" == *"main"* ]]'
 
-ok "show code has models field" 'o=$(bash "$W" show code); [[ "$o" == *"models:"* ]]'
+ok "show code has models field" 'o=$("$W" show code); [[ "$o" == *"models:"* ]]'
 
 # model: @bench:code → resolved via allocation to minimax,...
-ok "model code → bench resolves to minimax" 'o=$(bash "$W" model code); [[ "$o" == *"minimax"* ]]'
-ok "model review → coder" '[ "$(bash "$W" model review)" = "coder" ]'
+ok "model code → bench resolves to minimax" 'o=$("$W" model code); [[ "$o" == *"minimax"* ]]'
+ok "model review → coder" '[ "$("$W" model review)" = "coder" ]'
 
 # context: all five layers present (Zleap format)
-ctx="$(bash "$W" context code)"
+ctx="$("$W" context code)"
 for sec in "System Prompt" "Workspace Prompt" "### Tools" "### Memory" "### History"; do
   ok "context has [$sec]" '[[ "$ctx" == *"$sec"* ]]'
 done
@@ -69,10 +69,10 @@ ok "context carries global no-Gemini rule" '[[ "$ctx" == *"Do not call Gemini"* 
 ok "context code exposes only this station tools(incl edit)" '[[ "$ctx" == *"edit"* ]]'
 
 # --task injection (capture then substring-match, avoids pipefail+grep -q SIGPIPE)
-ok "context --task injects task" 'o=$(bash "$W" context code --task "doX"); [[ "$o" == *"doX"* ]]'
+ok "context --task injects task" 'o=$("$W" context code --task "doX"); [[ "$o" == *"doX"* ]]'
 
-bash "$W" context nope >/dev/null 2>&1; ok "unknown workspace → non-0" '[ "$?" -ne 0 ]'
-o=$(bash "$W" 2>&1); ok "no subcommand → shows help(incl list)" '[[ "$o" == *"list"* ]]'
+"$W" context nope >/dev/null 2>&1; ok "unknown workspace → non-0" '[ "$?" -ne 0 ]'
+o=$("$W" 2>&1); ok "no subcommand → shows help(incl list)" '[[ "$o" == *"list"* ]]'
 ok "shell delegates to engine CLI" 'grep -q "^workspace context code --task doX$" "$FUGUE_WORKSPACE_CALLS"'
 
 tdone

@@ -24,6 +24,9 @@ const explicit = [
   "backends/bin/cc-models",
   "backends/bin/cc-sync",
   "orchestration/fuguectl/fuguectl",
+  ...collect(join(root, "orchestration", "fuguectl"), (file) =>
+    /\/fuguectl-[a-z]+$/u.test(file),
+  ),
 ].filter((file) => existsSync(join(root, file)));
 
 const scripts = [

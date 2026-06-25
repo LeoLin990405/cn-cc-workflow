@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+import { runSimpleBridge } from "./fuguectl-node-bridge.mjs";
+
+runSimpleBridge({
+  argv: process.argv.slice(2),
+  command: "run",
+  help: `fuguectl-run — TypeScript cross-phase run facade bridge
+
+set --task <file> [--round N]
+round <N>
+status [--human]
+next
+clear
+`,
+});

@@ -1,0 +1,10 @@
+#!/usr/bin/env node
+import { runSimpleBridge } from "./fuguectl-node-bridge.mjs";
+
+runSimpleBridge({
+  argv: process.argv.slice(2),
+  command: "preflight",
+  help: `fuguectl-preflight [provider config path]
+pre-run go/no-go gate for parallel dispatch
+`,
+});

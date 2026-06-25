@@ -2,7 +2,7 @@
 # fuguectl-goal.test.sh
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-G="$HERE/fuguectl-goal.sh"
+G="$HERE/fuguectl-goal"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export FUGUE_ENGINE_CLI="$TMP/fugue-engine"
 export FUGUE_GOAL_CALLS="$TMP/goal-calls.txt"
@@ -63,25 +63,25 @@ printf '%s\n' \
 
 echo "fuguectl-goal tests"
 
-ok "template has outcome+gate" 'bash "$G" template | grep -q "outcome:" && bash "$G" template | grep -q "gate:"'
+ok "template has outcome+gate" '"$G" template | grep -q "outcome:" && "$G" template | grep -q "gate:"'
 
 printf 'outcome: example\ngate: true\nrubric: no regression\nrounds: 2\n' > "$TMP/g.spec"
-bash "$G" check "$TMP/g.spec" >/dev/null 2>&1; ok "gate=true → check met(0)" '[ "$?" -eq 0 ]'
+"$G" check "$TMP/g.spec" >/dev/null 2>&1; ok "gate=true → check met(0)" '[ "$?" -eq 0 ]'
 
 printf 'outcome: bad\ngate: false\n' > "$TMP/bad.spec"
-bash "$G" check "$TMP/bad.spec" >/dev/null 2>&1; ok "gate=false → not met(non-0)" '[ "$?" -ne 0 ]'
+"$G" check "$TMP/bad.spec" >/dev/null 2>&1; ok "gate=false → not met(non-0)" '[ "$?" -ne 0 ]'
 
-ok "show parses outcome=example" 'o=$(bash "$G" show "$TMP/g.spec"); case "$o" in *"outcome:  example"*) true;; *) false;; esac'
-ok "show parses rounds=2" 'o=$(bash "$G" show "$TMP/g.spec"); case "$o" in *"rounds:   2"*) true;; *) false;; esac'
+ok "show parses outcome=example" 'o=$("$G" show "$TMP/g.spec"); case "$o" in *"outcome:  example"*) true;; *) false;; esac'
+ok "show parses rounds=2" 'o=$("$G" show "$TMP/g.spec"); case "$o" in *"rounds:   2"*) true;; *) false;; esac'
 
 # gate with && compound command
 printf 'outcome: x\ngate: true && true\n' > "$TMP/cmp.spec"
-bash "$G" check "$TMP/cmp.spec" >/dev/null 2>&1; ok "compound gate(&&) evaluates correctly" '[ "$?" -eq 0 ]'
+"$G" check "$TMP/cmp.spec" >/dev/null 2>&1; ok "compound gate(&&) evaluates correctly" '[ "$?" -eq 0 ]'
 
 printf 'outcome: no gate\n' > "$TMP/nogate.spec"
-bash "$G" check "$TMP/nogate.spec" >/dev/null 2>&1; ok "no gate line → non-0" '[ "$?" -ne 0 ]'
-bash "$G" check /no/such >/dev/null 2>&1; ok "spec not exist → non-0" '[ "$?" -ne 0 ]'
-bash "$G" bogus >/dev/null 2>&1; ok "unknown subcommand → non-0" '[ "$?" -ne 0 ]'
+"$G" check "$TMP/nogate.spec" >/dev/null 2>&1; ok "no gate line → non-0" '[ "$?" -ne 0 ]'
+"$G" check /no/such >/dev/null 2>&1; ok "spec not exist → non-0" '[ "$?" -ne 0 ]'
+"$G" bogus >/dev/null 2>&1; ok "unknown subcommand → non-0" '[ "$?" -ne 0 ]'
 ok "shell delegates to engine CLI" 'grep -q "^goal check .*g.spec$" "$FUGUE_GOAL_CALLS"'
 
 tdone

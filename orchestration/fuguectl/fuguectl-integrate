@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+import { runSimpleBridge } from "./fuguectl-node-bridge.mjs";
+
+runSimpleBridge({
+  argv: process.argv.slice(2),
+  command: "integrate",
+  helpOnEmpty: false,
+  help: `fuguectl-integrate — TypeScript worktree integrator bridge
+
+--work <repo>
+--agents "a b c"
+--ws-parent <dir>
+--onconflict abort|skip
+--ownership <file>
+--task <file>
+--dry
+`,
+});

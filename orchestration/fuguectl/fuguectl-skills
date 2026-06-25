@@ -1,0 +1,17 @@
+#!/usr/bin/env node
+import { runSimpleBridge } from "./fuguectl-node-bridge.mjs";
+
+runSimpleBridge({
+  argv: process.argv.slice(2),
+  command: "skills",
+  help: `fuguectl-skills — TypeScript skills catalog bridge
+
+index [--refresh]
+list [--type functional|note|all] [--source user|system|plugin|all]
+match "<query>" [--type t] [--source s] [--limit N]
+show <id>
+inject <id1,id2,...> [--full]
+validate <id> | --dir <d> [--official]
+forge --name <id> (--from-experience <ws/slug> | --source <f> | --material)
+`,
+});

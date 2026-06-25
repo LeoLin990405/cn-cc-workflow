@@ -2,7 +2,7 @@
 # fuguectl-summary.test.sh
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-S="$HERE/fuguectl-summary.sh"
+S="$HERE/fuguectl-summary"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export FUGUE_CACHE="$TMP/cache"
 export FUGUE_ENGINE_CLI="$TMP/fugue-engine"
@@ -61,18 +61,18 @@ printf 'done\n' > "$ROUND/t1.status"
 printf 'fail\n' > "$ROUND/t2.status"
 printf 'timeout\n' > "$ROUND/t2.reason"
 
-out="$(bash "$S" 1)"
+out="$("$S" 1)"
 ok "summary has Round 1 title" 'echo "$out" | grep -q "Round 1 summary"'
 ok "summary has counts done=1 fail=1" 'echo "$out" | grep -q "done=1 fail=1"'
 ok "summary lists task detail" 'echo "$out" | grep -q "t1" && echo "$out" | grep -q "cc-glm"'
 
 # --task write
 TASKF="$TMP/task.md"; printf '## Log\n' > "$TASKF"
-bash "$S" 1 --task "$TASKF" >/dev/null 2>&1
+"$S" 1 --task "$TASKF" >/dev/null 2>&1
 ok "--task writes summary into file" 'grep -q "Round 1 summary" "$TASKF"'
 
 # round not init → non-0
-bash "$S" 9 >/dev/null 2>&1; ok "round not init → non-0" '[ "$?" -ne 0 ]'
+"$S" 9 >/dev/null 2>&1; ok "round not init → non-0" '[ "$?" -ne 0 ]'
 ok "shell delegates to engine CLI" 'grep -q "^summary 1$" "$FUGUE_SUMMARY_CALLS"'
 
 tdone

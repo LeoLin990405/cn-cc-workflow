@@ -1,0 +1,17 @@
+#!/usr/bin/env node
+import { runSubcommandBridge } from "./fuguectl-node-bridge.mjs";
+
+runSubcommandBridge({
+  argv: process.argv.slice(2),
+  command: "agent-registry",
+  allowed: ["template", "validate", "list", "resolve"],
+  help: `fuguectl-agents — TypeScript Agent Runtime Registry bridge
+
+template               print a starter registry JSON
+validate <file>        validate the registry schema
+list <file>            print id<TAB>harness<TAB>target<TAB>roles
+resolve <file> <id>    print resolved fields for one logical agent id
+`,
+  unknown: (subcommand) =>
+    `fuguectl-agents: unknown subcommand '${subcommand}' (template|validate|list|resolve)`,
+});

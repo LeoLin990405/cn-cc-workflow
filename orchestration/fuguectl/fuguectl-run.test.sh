@@ -2,7 +2,7 @@
 # fuguectl-run.test.sh — self-test for the run shell bridge.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-R="$HERE/fuguectl-run.sh"
+R="$HERE/fuguectl-run"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export FUGUE_CACHE="$TMP/cache"
 export FUGUE_ENGINE_CLI="$TMP/fugue-engine"
@@ -26,13 +26,13 @@ chmod +x "$FUGUE_ENGINE_CLI"
 
 echo "fuguectl-run tests"
 
-bash "$R" set --task "$TMP/TASK.md" --round 2 >/dev/null
+"$R" set --task "$TMP/TASK.md" --round 2 >/dev/null
 ok "run shim forwards set" 'grep -q "^run set --task $TMP/TASK.md --round 2$" "$FUGUE_RUN_CALLS"'
 
-bash "$R" status --human >/dev/null
+"$R" status --human >/dev/null
 ok "run shim preserves status flags" 'grep -q "^run status --human$" "$FUGUE_RUN_CALLS"'
 
-help="$(bash "$R" --help)"
+help="$("$R" --help)"
 ok "help prints run commands" 'echo "$help" | grep -q "status \[--human\]"'
 ok "help does not call engine" '[ "$(grep -c . "$FUGUE_RUN_CALLS")" -eq 2 ]'
 

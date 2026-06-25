@@ -2,7 +2,7 @@
 # fuguectl-doctor.test.sh — shell shim tests for the TypeScript doctor
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-D="$HERE/fuguectl-doctor.sh"
+D="$HERE/fuguectl-doctor"
 FG="$HERE/fuguectl"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export FUGUE_ENGINE_CLI="$TMP/fugue-engine"
@@ -30,14 +30,14 @@ EOF
 
 echo "fuguectl-doctor tests"
 
-out="$(bash "$D")"
+out="$("$D")"
 ok "doctor reports roles" 'echo "$out" | grep -q "^roles:"'
 ok "doctor reports recommendation" 'echo "$out" | grep -q "recommended:"'
 
-quiet="$(bash "$D" --quiet)"
+quiet="$("$D" --quiet)"
 ok "quiet summary survives" 'echo "$quiet" | grep -q "^agents=3 backends_ready=2/9"'
 
-top="$(bash "$FG" doctor --quiet)"
+top="$("$FG" doctor --quiet)"
 ok "top-level doctor entrypoint works" 'echo "$top" | grep -q "fugue-cc=1"'
 ok "shell delegates to engine CLI" 'grep -q "^doctor --quiet$" "$FUGUE_DOCTOR_CALLS"'
 

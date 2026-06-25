@@ -1,0 +1,14 @@
+#!/usr/bin/env node
+import { runSimpleBridge } from "./fuguectl-node-bridge.mjs";
+
+runSimpleBridge({
+  argv: process.argv.slice(2),
+  command: "loop",
+  help: `fuguectl-loop — TypeScript review-fix loop bridge
+
+init  [--max N] [--task F] [--best-sha SHA] [--best-n N]
+record <round> --gate pass|fail --verdict ACCEPTED|NEEDSFIX --findings N [--ask-user K] [--sha SHA] [--same-class] [--note "..."]
+decide|next
+status
+`,
+});

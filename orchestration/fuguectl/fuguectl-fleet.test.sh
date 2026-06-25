@@ -2,7 +2,7 @@
 # fuguectl-fleet.test.sh — test up --dry(command/strip) + status(stub) + down; never really starts the fleet
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-F="$HERE/fuguectl-fleet.sh"
+F="$HERE/fuguectl-fleet"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/work/.fugue-cc" "$TMP/claude/.fugue-cc"
 export FUGUE_CC_WORK="$TMP/work" FUGUE_CC_CLAUDE="$TMP/claude"
@@ -21,7 +21,7 @@ export FUGUE_CC_BIN="$TMP/fugue-cc"
 echo "fuguectl-fleet tests"
 
 notready
-out="$(bash "$F" up --dry)"
+out="$("$F" up --dry)"
 work_line="$(printf '%s\n' "$out" | sed -n '/\/work /p' | head -1)"
 claude_line="$(printf '%s\n' "$out" | sed -n '/\/claude /p' | head -1)"
 ok "up --dry strips CLAUDE_CODE_*(incl TEST_X)" '[[ "$out" == *"-u CLAUDE_CODE_TEST_X"* ]]'
@@ -31,7 +31,7 @@ ok "claude pool carries CLAUDE_START_CMD prefix" '[[ "$claude_line" == *"CLAUDE_
 ok "work pool has no claude prefix" '[[ "$work_line" != *"CLAUDE_START_CMD"* ]]'
 
 # pty.fork fallback dry
-outp="$(bash "$F" up --pty --dry)"
+outp="$("$F" up --pty --dry)"
 ok "up --pty --dry uses fleet-launch.py" '[[ "$outp" == *"fleet-launch.py"* ]]'
 ok "up --pty --dry includes fugue-cc -s" '[[ "$outp" == *"fugue-cc -s"* ]]'
 
@@ -54,19 +54,19 @@ if command -v python3 >/dev/null 2>&1; then
   python3 "$HERE/fleet-launch.py" >/dev/null 2>&1; ok "fleet-launch no args → nonzero" '[ "$?" -ne 0 ]'
 fi
 
-ok "status(not-ready) reports down" 'o=$(bash "$F" status 2>&1); grep -q down <<<"$o"'
+ok "status(not-ready) reports down" 'o=$("$F" status 2>&1); grep -q down <<<"$o"'
 
 ready
-ok "status(ready stub=mounted) reports ready" 'o=$(bash "$F" status 2>&1); grep -q ready <<<"$o"'
+ok "status(ready stub=mounted) reports ready" 'o=$("$F" status 2>&1); grep -q ready <<<"$o"'
 
 # regression: daemon alive but unmounted must report down(not falsely ready), else dispatch stuck in empty queue
 unmounted
-ok "status(unmounted: alive but not mounted) reports down not ready" 'o=$(bash "$F" status 2>&1); grep -q down <<<"$o" && ! grep -q "✓ ready" <<<"$o"'
+ok "status(unmounted: alive but not mounted) reports down not ready" 'o=$("$F" status 2>&1); grep -q down <<<"$o" && ! grep -q "✓ ready" <<<"$o"'
 # regression: fugue-cc ping returns desired_state: running even when stopped(config intent ≠ actual mount), not ready
 printf '#!/usr/bin/env bash\necho "desired_state: running"\n' > "$TMP/fugue-cc"; chmod +x "$TMP/fugue-cc"
-ok "status(desired_state:running config intent ≠ mount) reports down" 'o=$(bash "$F" status 2>&1); grep -q down <<<"$o"'
+ok "status(desired_state:running config intent ≠ mount) reports down" 'o=$("$F" status 2>&1); grep -q down <<<"$o"'
 
-bash "$F" down >/dev/null 2>&1; ok "down does not error" '[ "$?" -eq 0 ]'
-bash "$F" bogus >/dev/null 2>&1; ok "unknown subcommand → nonzero" '[ "$?" -ne 0 ]'
+"$F" down >/dev/null 2>&1; ok "down does not error" '[ "$?" -eq 0 ]'
+"$F" bogus >/dev/null 2>&1; ok "unknown subcommand → nonzero" '[ "$?" -ne 0 ]'
 
 tdone

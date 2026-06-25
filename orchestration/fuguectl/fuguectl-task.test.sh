@@ -2,7 +2,7 @@
 # fuguectl-task.test.sh — self-test for fuguectl-task.sh
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-T="$HERE/fuguectl-task.sh"
+T="$HERE/fuguectl-task"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export TASKS="$TMP/tasks"
 export FUGUE_ENGINE_CLI="$TMP/fugue-engine"
@@ -84,7 +84,7 @@ printf '%s\n' \
 
 echo "fuguectl-task tests"
 
-F="$(bash "$T" new "test task title" P0)"
+F="$("$T" new "test task title" P0)"
 ok "new returns path and file exists" '[ -f "$F" ]'
 ok "new filename like TASK-<date>-NNN.md" 'echo "$F" | grep -qE "TASK-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{3}\.md$"'
 ok "Status: IN_PROGRESS" 'grep -q "^Status: IN_PROGRESS" "$F"'
@@ -93,22 +93,22 @@ ok "title goes into title line" 'grep -q "test task title" "$F"'
 ok "has Log section" 'grep -q "^## Log" "$F"'
 
 # second new should increment the number (no overwrite)
-F2="$(bash "$T" new "second" )"
+F2="$("$T" new "second" )"
 ok "second new different file" '[ "$F" != "$F2" ]'
 
-bash "$T" log "$F" "first log entry" >/dev/null
+"$T" log "$F" "first log entry" >/dev/null
 ok "log appends to file" 'grep -q "first log entry" "$F"'
 ok "log has timestamp" 'grep -qE "^- \[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}\] first log entry" "$F"'
-ok "log forwards multi-word message for TS joining" 'bash "$T" log "$F" first second >/dev/null && grep -q "first second" "$F"'
+ok "log forwards multi-word message for TS joining" '"$T" log "$F" first second >/dev/null && grep -q "first second" "$F"'
 
-bash "$T" "done" "$F" >/dev/null
+"$T" "done" "$F" >/dev/null
 ok "done → Status: DONE" 'grep -q "^Status: DONE" "$F"'
 ok "done wrote Completed time" 'grep -qE "^Completed: [0-9]{4}-" "$F"'
 ok "done no longer IN_PROGRESS" '! grep -q "^Status: IN_PROGRESS" "$F"'
 
 # misuse
-bash "$T" new >/dev/null 2>&1; ok "new without title → non-0 exit" '[ "$?" -ne 0 ]'
-bash "$T" log /no/such/file x >/dev/null 2>&1; ok "log nonexistent file → non-0" '[ "$?" -ne 0 ]'
+"$T" new >/dev/null 2>&1; ok "new without title → non-0 exit" '[ "$?" -ne 0 ]'
+"$T" log /no/such/file x >/dev/null 2>&1; ok "log nonexistent file → non-0" '[ "$?" -ne 0 ]'
 ok "shell delegates positional priority to engine CLI" 'grep -q "^task new test task title P0$" "$FUGUE_TASK_CALLS"'
 ok "shell delegates split log words to engine CLI" 'grep -q "^task log .* first second$" "$FUGUE_TASK_CALLS"'
 

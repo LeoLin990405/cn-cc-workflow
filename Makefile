@@ -17,7 +17,7 @@ verify: ## Launcher self-test + cc-models doctor
 	npm run verify:launchers && cc-models doctor
 
 doctor: ## Environment recon + workflow recommendation (run on any machine)
-	bash orchestration/fuguectl/fuguectl doctor
+	orchestration/fuguectl/fuguectl doctor
 
 install-skill: ## Install as a Claude Code skill (~/.claude/skills/fugue, backs up first if present)
 	npm run install:skill

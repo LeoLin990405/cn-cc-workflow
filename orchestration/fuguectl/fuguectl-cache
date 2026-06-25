@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+import { runSimpleBridge } from "./fuguectl-node-bridge.mjs";
+
+runSimpleBridge({
+  argv: process.argv.slice(2),
+  command: "cache",
+  help: `fuguectl-cache — TypeScript join-result cache bridge
+
+init    <round> <task_id:agent> [...]   declare N tasks this round
+put     <round> <task_id> <file>        store a task result + mark done
+fail    <round> <task_id> [reason]      mark a task failed
+status  <round>                         print done/fail/pending counts
+barrier <round> [--wait [secs]] [--require-success]
+collect <round>                         output result paths of done tasks
+list    <round>                         detail
+resume  <round>                         print unreturned task_id<TAB>agent
+`,
+});

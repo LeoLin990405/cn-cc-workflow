@@ -2,7 +2,7 @@
 # fuguectl-runtime.test.sh — use a stub fugue-cc to test version drift + grafting + stamp (never touches real fugue-cc)
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-S="$HERE/fuguectl-runtime.sh"
+S="$HERE/fuguectl-runtime"
 FG="$HERE/fuguectl"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export FUGUE_ENGINE_CLI="$TMP/fugue-engine"
@@ -86,23 +86,23 @@ touch "$TMP/install/lib/provider_profiles/api_shortcuts.py"
 
 echo "fuguectl-runtime tests"
 
-out="$(bash "$S" check)"
+out="$("$S" check)"
 ok "check reports version drift (none → v9.9.9)" 'echo "$out" | grep -q "version drift"'
 ok "check: grafting api_shortcuts.py present" 'echo "$out" | grep -q "grafting api_shortcuts.py present"'
-out_runtime="$(bash "$FG" runtime check)"
+out_runtime="$("$FG" runtime check)"
 ok "runtime entrypoint suggests fuguectl runtime adapt" 'echo "$out_runtime" | grep -q "fuguectl runtime adapt --apply"'
 
-bash "$S" adapt >/dev/null 2>&1
+"$S" adapt >/dev/null 2>&1
 ok "dry-run does not write stamp" '[ ! -f "$FUGUE_STATE/runtime-version" ]'
 
-bash "$S" adapt --apply >/dev/null 2>&1
+"$S" adapt --apply >/dev/null 2>&1
 ok "apply writes stamp=current version" 'grep -q "v9.9.9" "$FUGUE_STATE/runtime-version" 2>/dev/null'
 
-out2="$(bash "$S" check)"
+out2="$("$S" check)"
 ok "after apply check shows no drift" 'echo "$out2" | grep -q "no drift"'
 
 rm "$TMP/install/lib/provider_profiles/api_shortcuts.py"
-out3="$(bash "$S" check)"
+out3="$("$S" check)"
 ok "missing grafting is detected" 'echo "$out3" | grep -q "api_shortcuts.py is gone"'
 
 # adapt with FUGUE_CC_WORK + clean config → run --config-only validation (stub fugue-cc, never touches real daemon)
@@ -110,11 +110,11 @@ touch "$TMP/install/lib/provider_profiles/api_shortcuts.py"   # restore grafting
 mkdir -p "$TMP/work/.fugue-cc"
 printf '[agents.cc-deepseek]\nmodel = "deepseek-v4-pro"\n' > "$TMP/work/.fugue-cc/provider.config"
 OUT4="$TMP/adapt-with-work.out"
-FUGUE_CC_WORK="$TMP/work" bash "$S" adapt --apply >"$OUT4" 2>&1
+FUGUE_CC_WORK="$TMP/work" "$S" adapt --apply >"$OUT4" 2>&1
 ok "adapt with FUGUE_CC_WORK runs config validation" 'grep -q "config validation" "$OUT4"'
 ok "adapt with FUGUE_CC_WORK still records stamp" 'grep -q "v9.9.9" "$FUGUE_STATE/runtime-version"'
 
-bash "$S" nope >/dev/null 2>&1; ok "unknown subcommand → nonzero" '[ "$?" -ne 0 ]'
+"$S" nope >/dev/null 2>&1; ok "unknown subcommand → nonzero" '[ "$?" -ne 0 ]'
 ok "shell delegates to engine CLI" 'grep -q "^runtime check$" "$FUGUE_RUNTIME_CALLS"'
 
 tdone

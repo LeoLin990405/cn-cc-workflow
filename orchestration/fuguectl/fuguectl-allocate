@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+import { runSimpleBridge } from "./fuguectl-node-bridge.mjs";
+
+runSimpleBridge({
+  argv: process.argv.slice(2),
+  command: "allocate",
+  help: `fuguectl-allocate — TypeScript adaptive allocator bridge
+
+<task-type> [--top] [--sample]
+list
+record <task-type> <agent> <ok|fail>
+feed type:agent:result [...]
+feed --from-ledger --result ok|fail [--fail a,b] [--ok a,b] [--keep]
+stats <task-type>
+reset [<task-type>]
+decay [--gamma G] [--type T]
+`,
+});

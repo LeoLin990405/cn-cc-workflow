@@ -2,7 +2,7 @@
 # fuguectl-allocate.test.sh — self-test for the allocate shell bridge.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-A="$HERE/fuguectl-allocate.sh"
+A="$HERE/fuguectl-allocate"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export FUGUE_ALLOCATION="$TMP/allocation.tsv"
 export FUGUE_ALLOCATION_STATS="$TMP/stats.tsv"
@@ -34,13 +34,13 @@ chmod +x "$FUGUE_ENGINE_CLI"
 
 echo "fuguectl-allocate tests"
 
-bash "$A" code --top >/dev/null
+"$A" code --top >/dev/null
 ok "allocate shim forwards rank" 'grep -q "^allocate code --top$" "$FUGUE_ALLOCATE_CALLS"'
 
-bash "$A" feed --from-ledger --result ok --fail cc-zeta >/dev/null
+"$A" feed --from-ledger --result ok --fail cc-zeta >/dev/null
 ok "allocate shim preserves feed flags" 'grep -q "^allocate feed --from-ledger --result ok --fail cc-zeta$" "$FUGUE_ALLOCATE_CALLS"'
 
-help="$(bash "$A" --help)"
+help="$("$A" --help)"
 ok "help prints allocate commands" 'case "$help" in *"record <task-type>"*) true;; *) false;; esac'
 ok "help does not call engine" '[ "$(grep -c . "$FUGUE_ALLOCATE_CALLS")" -eq 2 ]'
 

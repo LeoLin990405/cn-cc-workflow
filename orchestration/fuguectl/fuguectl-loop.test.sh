@@ -2,7 +2,7 @@
 # fuguectl-loop.test.sh — self-test for the loop shell bridge.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOOP="$HERE/fuguectl-loop.sh"
+LOOP="$HERE/fuguectl-loop"
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export FUGUE_CACHE="$TMP/cache"
@@ -27,16 +27,16 @@ chmod +x "$FUGUE_ENGINE_CLI"
 
 echo "fuguectl-loop tests"
 
-bash "$LOOP" init --max 3 --best-sha sha0 >/dev/null
+"$LOOP" init --max 3 --best-sha sha0 >/dev/null
 ok "loop shim forwards init" 'grep -q "^loop init --max 3 --best-sha sha0$" "$FUGUE_LOOP_CALLS"'
 
-bash "$LOOP" record 1 --gate pass --verdict NEEDSFIX --findings 2 --ask-user 1 >/dev/null
+"$LOOP" record 1 --gate pass --verdict NEEDSFIX --findings 2 --ask-user 1 >/dev/null
 ok "loop shim preserves record flags" 'grep -q "^loop record 1 --gate pass --verdict NEEDSFIX --findings 2 --ask-user 1$" "$FUGUE_LOOP_CALLS"'
 
-bash "$LOOP" decide >/dev/null
+"$LOOP" decide >/dev/null
 ok "loop shim forwards decide" 'grep -q "^loop decide$" "$FUGUE_LOOP_CALLS"'
 
-help="$(bash "$LOOP" --help)"
+help="$("$LOOP" --help)"
 ok "help prints loop commands" 'echo "$help" | grep -q "record <round>"'
 ok "help does not call engine" '[ "$(grep -c . "$FUGUE_LOOP_CALLS")" -eq 3 ]'
 

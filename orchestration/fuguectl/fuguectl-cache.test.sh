@@ -2,7 +2,7 @@
 # fuguectl-cache.test.sh — self-test for the cache shell bridge.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CACHE="$HERE/fuguectl-cache.sh"
+CACHE="$HERE/fuguectl-cache"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -28,13 +28,13 @@ chmod +x "$FUGUE_ENGINE_CLI"
 
 echo "fuguectl-cache tests"
 
-bash "$CACHE" init 1 t1:cc-deepseek t2:cc-glm >/dev/null
+"$CACHE" init 1 t1:cc-deepseek t2:cc-glm >/dev/null
 ok "cache shim forwards init" 'grep -q "^cache init 1 t1:cc-deepseek t2:cc-glm$" "$FUGUE_CACHE_CALLS"'
 
-bash "$CACHE" barrier 1 --require-success >/dev/null
+"$CACHE" barrier 1 --require-success >/dev/null
 ok "cache shim preserves barrier flags" 'grep -q "^cache barrier 1 --require-success$" "$FUGUE_CACHE_CALLS"'
 
-help="$(bash "$CACHE" --help)"
+help="$("$CACHE" --help)"
 ok "help prints cache commands" 'case "$help" in *"barrier <round>"*) true;; *) false;; esac'
 ok "help does not call engine" '[ "$(grep -c . "$FUGUE_CACHE_CALLS")" -eq 2 ]'
 

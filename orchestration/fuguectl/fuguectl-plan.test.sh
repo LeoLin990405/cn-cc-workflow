@@ -2,7 +2,7 @@
 # fuguectl-plan.test.sh — stub fugue-cc to test planning-panel dispatch
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-P="$HERE/fuguectl-plan.sh"
+P="$HERE/fuguectl-plan"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export FUGUE_CACHE="$TMP/cache"
 export FUGUE_ENGINE_CLI="$TMP/fugue-engine"
@@ -53,16 +53,16 @@ chmod +x "$TMP/fugue-cc"; export FUGUE_CC_BIN="$TMP/fugue-cc"
 
 echo "fuguectl-plan tests"
 
-out="$(bash "$P" "build a login feature" --models cc-a,cc-b)"
+out="$("$P" "build a login feature" --models cc-a,cc-b)"
 ok "dispatched to 2 specified models" '[ "$(grep -c . "$TMP/calls")" -eq 2 ]'
 ok "calls include cc-a and cc-b" 'grep -q cc-a "$TMP/calls" && grep -q cc-b "$TMP/calls"'
 ok "output lists plan file paths" '[[ "$out" == *"cc-a.plan.md"* ]]'
 
 : > "$TMP/calls"
-bash "$P" "default models test" >/dev/null 2>&1
+"$P" "default models test" >/dev/null 2>&1
 ok "default models = 3 families" '[ "$(grep -c . "$TMP/calls")" -eq 3 ]'
 
-bash "$P" >/dev/null 2>&1; ok "no goal → non-0" '[ "$?" -ne 0 ]'
+"$P" >/dev/null 2>&1; ok "no goal → non-0" '[ "$?" -ne 0 ]'
 ok "shell delegates to engine CLI" 'grep -q "^plan build a login feature --models cc-a,cc-b$" "$FUGUE_PLAN_CALLS"'
 
 tdone
