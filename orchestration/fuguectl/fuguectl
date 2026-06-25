@@ -25,30 +25,32 @@
 #   fuguectl help                this help
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+. "$HERE/fuguectl-lib.sh"
 CLI_NAME="fuguectl"
 print_help(){ sed -n '2,25p' "$0"; }
 
 sub="${1:-help}"; shift || true
 case "$sub" in
-  doctor)    exec bash "$HERE/fuguectl-doctor.sh"    "$@";;
-  preflight) exec bash "$HERE/fuguectl-preflight.sh" "$@";;
-  fleet)     exec bash "$HERE/fuguectl-fleet.sh"     "$@";;
-  task)      exec bash "$HERE/fuguectl-task.sh"      "$@";;
-  template)  exec bash "$HERE/fuguectl-template.sh"  "$@";;
-  dispatch)  exec bash "$HERE/fuguectl-dispatch.sh"  "$@";;
-  cache)     exec bash "$HERE/fuguectl-cache.sh"     "$@";;
-  integrate) exec bash "$HERE/fuguectl-integrate.sh" "$@";;
-  allocate)  exec bash "$HERE/fuguectl-allocate.sh"  "$@";;
-  skills)    exec bash "$HERE/fuguectl-skills.sh"    "$@";;
-  workspace) exec bash "$HERE/fuguectl-workspace.sh" "$@";;
-  agents)    exec bash "$HERE/fuguectl-agents.sh"    "$@";;
-  experience) exec bash "$HERE/fuguectl-experience.sh" "$@";;
-  plan)      exec bash "$HERE/fuguectl-plan.sh"      "$@";;
-  goal)      exec bash "$HERE/fuguectl-goal.sh"      "$@";;
-  loop)      exec bash "$HERE/fuguectl-loop.sh"      "$@";;
-  run)       exec bash "$HERE/fuguectl-run.sh"       "$@";;
-  summary|round-summary) exec bash "$HERE/fuguectl-summary.sh" "$@";;
-  runtime) exec bash "$HERE/fuguectl-runtime.sh" "$@";;
+  doctor)    fx_run_engine doctor "$@";;
+  preflight) fx_run_engine preflight "$@";;
+  fleet)     fx_run_engine fleet "$@";;
+  task)      fx_run_engine task "$@";;
+  template)  fx_run_engine template "$@";;
+  dispatch)  fx_run_engine dispatch "$@";;
+  cache)     fx_run_engine cache "$@";;
+  integrate) fx_run_engine integrate "$@";;
+  allocate)  fx_run_engine allocate "$@";;
+  skills)    fx_run_engine skills "$@";;
+  workspace) fx_run_engine workspace "$@";;
+  agents)    fx_run_engine agent-registry "$@";;
+  experience) fx_run_engine experience "$@";;
+  plan)      fx_run_engine plan "$@";;
+  goal)      fx_run_engine goal "$@";;
+  loop)      fx_run_engine loop "$@";;
+  run)       fx_run_engine run "$@";;
+  summary|round-summary) fx_run_engine summary "$@";;
+  runtime) fx_run_engine runtime "$@";;
   selftest)
     ec=0
     for t in "$HERE"/*.test.sh; do

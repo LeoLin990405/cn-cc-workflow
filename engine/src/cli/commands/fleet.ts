@@ -5,6 +5,7 @@ import { basename, join as joinPath } from 'node:path';
 import { Command, Option } from 'clipanion';
 
 import { NodeCommandRunner } from '../../infra/node-command-runner.js';
+import { fuguectlFile } from '../default-paths.js';
 
 const MOUNTED = /^mount_state:\s*mounted/mu;
 
@@ -52,8 +53,7 @@ export class FleetCommand extends Command {
   private readonly claudePrefix = defaultClaudePrefix();
   private readonly cliName = process.env.FUGUE_DRIVER_NAME ?? 'fuguectl';
   private readonly launcher =
-    process.env.FUGUE_FLEET_LAUNCHER ??
-    joinPath(process.cwd(), 'orchestration/fuguectl/fleet-launch.py');
+    process.env.FUGUE_FLEET_LAUNCHER ?? fuguectlFile(import.meta.url, 'fleet-launch.py');
 
   override async execute(): Promise<number> {
     const [sub, ...rest] = this.args;

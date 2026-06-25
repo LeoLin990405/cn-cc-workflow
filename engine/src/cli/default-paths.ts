@@ -41,6 +41,9 @@ export const fuguectlDir = (metaUrl: string): string =>
 export const fuguectlScript = (metaUrl: string, name: string): string =>
   joinPath(fuguectlDir(metaUrl), `fuguectl-${name}.sh`);
 
+export const fuguectlFile = (metaUrl: string, name: string): string =>
+  joinPath(fuguectlDir(metaUrl), name);
+
 export const defaultTemplatesDir = (metaUrl: string): string =>
   process.env.FUGUE_TEMPLATES ?? joinPath(fuguectlDir(metaUrl), 'templates');
 

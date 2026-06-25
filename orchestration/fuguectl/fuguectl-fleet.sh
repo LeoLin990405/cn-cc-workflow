@@ -8,9 +8,8 @@
 set -uo pipefail
 # shellcheck source=/dev/null
 . "$(dirname "${BASH_SOURCE[0]}")/fuguectl-lib.sh"
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 case "${1:-}" in
   ''|-h|--help) sed -n '2,7p' "$0";;
-  *) FUGUE_FLEET_LAUNCHER="${FUGUE_FLEET_LAUNCHER:-$HERE/fleet-launch.py}" fx_run_engine fleet "$@";;
+  *) fx_run_engine fleet "$@";;
 esac
