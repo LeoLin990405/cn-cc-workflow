@@ -139,7 +139,7 @@ suite.ok(
 if (oldWork === undefined) delete process.env.FUGUE_CC_WORK;
 else process.env.FUGUE_CC_WORK = oldWork;
 
-suite.ok("shell delegates to engine CLI", () =>
+suite.ok("wrapper delegates to engine CLI", () =>
   readFileSync(calls, "utf8").includes("preflight --config-only "),
 );
 

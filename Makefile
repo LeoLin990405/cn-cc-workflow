@@ -35,7 +35,7 @@ scan: ## Secret-leak scan (local gate)
 	npm run scan
 
 lint: ## Node launcher syntax check
-	npm run lint:shell
+	npm run lint:launchers
 
 check-docs: ## Docs-drift gate (fuguectl README + Self-Harness guide == actual code)
 	npm run check:docs

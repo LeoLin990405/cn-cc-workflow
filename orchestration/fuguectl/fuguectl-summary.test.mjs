@@ -84,7 +84,7 @@ suite.ok("--task writes summary into file", () =>
 );
 
 suite.ok("round not init → non-0", () => run(summary, ["9"]).status !== 0);
-suite.ok("shell delegates to engine CLI", () =>
+suite.ok("wrapper delegates to engine CLI", () =>
   readFileSync(calls, "utf8").includes("summary 1\n"),
 );
 

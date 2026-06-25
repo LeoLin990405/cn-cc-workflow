@@ -164,7 +164,7 @@ suite.ok(
   "unknown subcommand → nonzero",
   () => run(runtime, ["nope"]).status !== 0,
 );
-suite.ok("shell delegates to engine CLI", () =>
+suite.ok("wrapper delegates to engine CLI", () =>
   readFileSync(calls, "utf8").includes("runtime check\n"),
 );
 

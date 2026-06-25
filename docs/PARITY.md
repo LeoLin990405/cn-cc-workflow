@@ -1,35 +1,51 @@
-# Parity tracker — bash `fuguectl` → TypeScript engine
+# Parity tracker — Node `fuguectl` → TypeScript engine
 
-Tracks the incremental migration (see [ARCHITECTURE.md](ARCHITECTURE.md) §5). The bash `fuguectl` stays green at every step; a capability only cuts over once its TS slice meets or beats the bash suite's coverage. Until then the engine is opt-in (`FUGUE_ENGINE=1`).
+Tracks the migration described in [ARCHITECTURE.md](ARCHITECTURE.md) §5. The
+repository has now cut over: there are no tracked `.sh` scripts, `fuguectl` is a
+set of small Node wrappers, and the strict TypeScript engine owns the tested
+domain behavior.
 
-Legend: `bash ✓` shipped in shell · `ts …` engine status (`◐ core` = ports+adapters landed & tested · `+ cli` = a `fugue` CLI command now drives that core) · **cutover** = bash retired/shimmed.
+Legend: `operator` = production `fuguectl` wrapper status · `engine` = typed
+core/CLI status (`◐ core` = ports+adapters landed and tested; `+ cli` = the
+`fugue` CLI command drives that core) · `cutover` = legacy script retired.
 
-The TS CLI (`fugue`, clipanion) landed in iter13 as a thin shell over the tested engine — `fugue version`, `fugue doctor`, `fugue fleet`, `fugue allocate`, `fugue dispatch`, `fugue integrate`, `fugue skills`, `fugue preflight`, `fugue cache init|put|fail|status|barrier|collect|list|resume`, `fugue plan`, `fugue task new|log|done`, `fugue template`, `fugue workspace list|show|model|context`, `fugue experience add|list|recall|show`, `fugue summary`, `fugue runtime check|adapt`, `fugue run set|round|status|next|clear`, `fugue loop init|record|decide|next|status`, `fugue goal template|show|check`, and the net-new `fugue self-harness template|run` surface. Build emits `dist/cli/main.js` (shebang preserved → `npx fugue`). Remaining subcommands stay engine-only until wired.
+The TS CLI (`fugue`, clipanion) exposes `fugue version`, `fugue doctor`,
+`fugue fleet`, `fugue allocate`, `fugue dispatch`, `fugue integrate`,
+`fugue skills`, `fugue preflight`,
+`fugue cache init|put|fail|status|barrier|collect|list|resume`, `fugue plan`,
+`fugue task new|log|done`, `fugue template`,
+`fugue workspace list|show|model|context`,
+`fugue experience add|list|recall|show`, `fugue summary`,
+`fugue runtime check|adapt`, `fugue run set|round|status|next|clear`,
+`fugue loop init|record|decide|next|status`, `fugue goal template|show|check`,
+`fugue agent-registry template|validate|list|resolve`, and
+`fugue self-harness template|run`. Build emits `dist/cli/main.js` (shebang
+preserved → `npx fugue`).
 
-| #   | Capability (bash subcommand)                                 | Primary port                                                             | bash          | ts                                    | cutover |
-| --- | ------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------- | ------------------------------------- | ------- |
-| 1   | `allocate` (+ record/feed/stats/decay)                       | `AllocationStrategy`                                                     | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 2   | `cache` (+ barrier/collect/resume)                           | `ResultStore` / `Barrier`                                                | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 3   | `loop` (record/decide/status)                                | `ReviewLoop`                                                             | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 4   | `preflight` (+ --probe)                                      | `QualityGate` + `Policy` (no-Gemini/gen≠review)                          | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 5   | `goal` (template/show/check)                                 | `GoalSpec` + acceptance gate                                             | ✓ shell shim  | ◐ core + cli (iter13)                 | ☑ shim  |
-| 6   | `integrate` (+ --ownership)                                  | `Integrator` + `VcsPort` + ownership                                     | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 7   | `workspace` (list/show/model/context)                        | `Workspace` / `ContextAssembler`                                         | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 8   | `experience` (add/recall/...)                                | `ExperienceStore`                                                        | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 9   | `skills` (index/match/inject)                                | `SkillCatalog`                                                           | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 10  | `dispatch` (--harness ...)                                   | `Harness` + `Phase`                                                      | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 11  | `fleet` (status/up/down)                                     | `Harness.health` + launcher                                              | ✓ shell shim  | ◐ health + cli (iter16)               | ☑ shim  |
-| 12  | `doctor`                                                     | recon + recommend                                                        | ✓ shell shim  | ◐ core + cli (iter13)                 | ☑ shim  |
-| 13  | `plan` (multi-model panel)                                   | planPanel (Harness parallel dispatch)                                    | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 14  | `run` (set/round/status/next)                                | `RunState` facade (`RunStore`)                                           | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 15  | `summary`                                                    | observability over `RunState`/`ResultCache`                              | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 16  | `task` (new/log/done)                                        | `TaskStore` audit trail                                                  | ✓ shell shim  | ◐ core + cli (iter13)                 | ☑ shim  |
-| 17  | `template` (render)                                          | `ContextAssembler` (template part)                                       | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| 18  | `runtime` (check/adapt)                                      | Runtime/provider sync (fugue-cc runtime)                                 | ✓ shell shim  | ◐ core + cli (iter16)                 | ☑ shim  |
-| —   | `(coordinator)` — wires the ports into the pipeline          | `Coordinator` + `wire.ts`                                                | n/a (driver)  | ◐ core (iter12)                       | ☐       |
-| —   | `agents` / `(agent-registry)` — logical agents over runtimes | `AgentRegistry` + `Coordinator` harness map                              | ✓ shell shim  | ◐ core + cli `agent-registry`         | ☑ shim  |
-| —   | `(self-harness)` — self-improving harness loop               | `SelfHarnessLoop` + `WeaknessMiner`/`HarnessProposer`/`HarnessValidator` | n/a (net-new) | ◐ core + live adapters + cli (iter15) | ☐       |
+| #   | Capability                                                   | Primary port                                                             | operator       | engine                                | cutover |
+| --- | ------------------------------------------------------------ | ------------------------------------------------------------------------ | -------------- | ------------------------------------- | ------- |
+| 1   | `allocate` (+ record/feed/stats/decay)                       | `AllocationStrategy`                                                     | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 2   | `cache` (+ barrier/collect/resume)                           | `ResultStore` / `Barrier`                                                | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 3   | `loop` (record/decide/status)                                | `ReviewLoop`                                                             | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 4   | `preflight` (+ --probe)                                      | `QualityGate` + `Policy` (no-Gemini/gen≠review)                          | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 5   | `goal` (template/show/check)                                 | `GoalSpec` + acceptance gate                                             | ✓ Node wrapper | ◐ core + cli (iter13)                 | ☑       |
+| 6   | `integrate` (+ --ownership)                                  | `Integrator` + `VcsPort` + ownership                                     | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 7   | `workspace` (list/show/model/context)                        | `Workspace` / `ContextAssembler`                                         | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 8   | `experience` (add/recall/...)                                | `ExperienceStore`                                                        | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 9   | `skills` (index/match/inject)                                | `SkillCatalog`                                                           | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 10  | `dispatch` (--harness ...)                                   | `Harness` + `Phase`                                                      | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 11  | `fleet` (status/up/down)                                     | `Harness.health` + launcher                                              | ✓ Node wrapper | ◐ health + cli (iter16)               | ☑       |
+| 12  | `doctor`                                                     | recon + recommend                                                        | ✓ Node wrapper | ◐ core + cli (iter13)                 | ☑       |
+| 13  | `plan` (multi-model panel)                                   | planPanel (Harness parallel dispatch)                                    | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 14  | `run` (set/round/status/next)                                | `RunState` facade (`RunStore`)                                           | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 15  | `summary`                                                    | observability over `RunState`/`ResultCache`                              | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 16  | `task` (new/log/done)                                        | `TaskStore` audit trail                                                  | ✓ Node wrapper | ◐ core + cli (iter13)                 | ☑       |
+| 17  | `template` (render)                                          | `ContextAssembler` (template part)                                       | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 18  | `runtime` (check/adapt)                                      | Runtime/provider sync (fugue-cc runtime)                                 | ✓ Node wrapper | ◐ core + cli (iter16)                 | ☑       |
+| 19  | `agents` / `(agent-registry)` — logical agents over runtimes | `AgentRegistry` + `Coordinator` harness map                              | ✓ Node wrapper | ◐ core + cli `agent-registry`         | ☑       |
+| —   | `(coordinator)` — wires the ports into the pipeline          | `Coordinator` + `wire.ts`                                                | n/a            | ◐ core (iter12)                       | n/a     |
+| —   | `(self-harness)` — self-improving harness loop               | `SelfHarnessLoop` + `WeaknessMiner`/`HarnessProposer`/`HarnessValidator` | n/a (net-new)  | ◐ core + live adapters + cli (iter15) | n/a     |
 
 Migration order (riskiest-last): pure strategies/state first (`allocate`, `loop`, `cache`, gates), then stores (`workspace`/`experience`/`skills`), then IO-heavy adapters (`harness`/`fleet`/`dispatch`), then the `Coordinator`.
 
-Beyond parity — **net-new capabilities** that abstract a studied reference into the engine ("our own thing", not a bash port). `(agent-registry)` is the first runtime-neutral orchestration slice: logical ids now resolve to a harness (`fugue-cc`, `codex`, `opencode`), a harness-native target, workspace metadata, and a model-family policy label, so Codex/Claude Code/OpenCode can share one dispatch flow instead of living in separate shell conventions. The `fuguectl agents` shell shim now exposes template/validate/list/resolve for operators, while the strict TS engine owns coordinator routing. `(self-harness)` realizes Shanghai Artificial Intelligence Laboratory's Self-Harness paper ([arXiv 2606.09498](https://arxiv.org/abs/2606.09498)): with the model/evaluator/benchmark held fixed, only the harness config evolves — each round mines verifier-grounded weaknesses, proposes bounded single-surface edits, and promotes one only under the non-regression gate `Δin ≥ 0 ∧ Δho ≥ 0 ∧ max > 0`. Iter15 adds the live model-backed miner/proposer, task-list validator, JSON spec parser, `wireSelfHarness`, and `fugue self-harness template|run`; see [SELF_HARNESS.md](SELF_HARNESS.md) for the operator guide. It composes with the bandit `AllocationStrategy` (which picks _who_ runs) by learning _how the harness is configured_.
+Beyond parity — **net-new capabilities** that abstract a studied reference into the engine ("our own thing", not a port). `(agent-registry)` is the first runtime-neutral orchestration slice: logical ids now resolve to a harness (`fugue-cc`, `codex`, `opencode`), a harness-native target, workspace metadata, and a model-family policy label, so Codex/Claude Code/OpenCode can share one dispatch flow instead of living in separate runtime conventions. The `fuguectl agents` Node wrapper exposes template/validate/list/resolve for operators, while the strict TS engine owns coordinator routing. `(self-harness)` realizes Shanghai Artificial Intelligence Laboratory's Self-Harness paper ([arXiv 2606.09498](https://arxiv.org/abs/2606.09498)): with the model/evaluator/benchmark held fixed, only the harness config evolves — each round mines verifier-grounded weaknesses, proposes bounded single-surface edits, and promotes one only under the non-regression gate `Δin ≥ 0 ∧ Δho ≥ 0 ∧ max > 0`. Iter15 adds the live model-backed miner/proposer, task-list validator, JSON spec parser, `wireSelfHarness`, and `fugue self-harness template|run`; see [SELF_HARNESS.md](SELF_HARNESS.md) for the operator guide. It composes with the bandit `AllocationStrategy` (which picks _who_ runs) by learning _how the harness is configured_.

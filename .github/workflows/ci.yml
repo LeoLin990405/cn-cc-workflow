@@ -31,7 +31,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
 
-  shell:
+  launchers:
     name: Launcher syntax + lint
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +40,7 @@ jobs:
         with:
           node-version: "20"
       - name: Launcher syntax
-        run: npm run lint:shell
+        run: npm run lint:launchers
       - name: Docs match code (README ↔ fuguectl subcommands/counts)
         run: npm run check:docs
 

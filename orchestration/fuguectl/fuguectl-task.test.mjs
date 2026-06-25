@@ -143,10 +143,10 @@ suite.ok(
   "log nonexistent file → non-0",
   () => run(task, ["log", "/no/such/file", "x"]).status !== 0,
 );
-suite.ok("shell delegates positional priority to engine CLI", () =>
+suite.ok("wrapper delegates positional priority to engine CLI", () =>
   readFileSync(calls, "utf8").includes("task new test task title P0\n"),
 );
-suite.ok("shell delegates split log words to engine CLI", () =>
+suite.ok("wrapper delegates split log words to engine CLI", () =>
   /^task log .* first second$/mu.test(readFileSync(calls, "utf8")),
 );
 

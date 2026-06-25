@@ -116,7 +116,7 @@ suite.ok(
   () => run(goal, ["check", "/no/such"]).status !== 0,
 );
 suite.ok("unknown subcommand → non-0", () => run(goal, ["bogus"]).status !== 0);
-suite.ok("shell delegates to engine CLI", () =>
+suite.ok("wrapper delegates to engine CLI", () =>
   /^goal check .*g\.spec$/mu.test(readFileSync(calls, "utf8")),
 );
 

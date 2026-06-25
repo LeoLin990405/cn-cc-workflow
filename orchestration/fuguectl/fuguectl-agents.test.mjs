@@ -115,7 +115,7 @@ suite.ok(
   "unknown subcommand rejected",
   () => run(agents, ["nope"]).status !== 0,
 );
-suite.ok("shell delegates to engine CLI", () =>
+suite.ok("wrapper delegates to engine CLI", () =>
   /^agent-registry resolve .* coder$/mu.test(readFileSync(calls, "utf8")),
 );
 

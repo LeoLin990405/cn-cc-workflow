@@ -7,7 +7,7 @@ const path = (...parts) => join(root, ...parts);
 
 const fuguectl = path("orchestration", "fuguectl", "fuguectl");
 const readmeEn = path("README.md");
-const readmeZh = path("README_ZH.md");
+const readmeZh = path("README.zh-CN.md");
 const fugueDir = path("orchestration", "fuguectl");
 const selfDoc = path("docs", "SELF_HARNESS.md");
 const selfDomain = path("engine", "src", "domain", "self-harness.ts");
@@ -30,7 +30,7 @@ const requireFile = (file, message) => {
 requireFile(fuguectl, `check-docs: cannot find ${fuguectl}`);
 requireFile(
   readmeZh,
-  `check-docs: cannot find ${readmeZh} (the repo is bilingual; keep README_ZH.md)`,
+  `check-docs: cannot find ${readmeZh} (the repo is bilingual; keep README.zh-CN.md)`,
 );
 requireFile(selfDoc, `check-docs: cannot find ${selfDoc}`);
 requireFile(selfDomain, `check-docs: cannot find ${selfDomain}`);
@@ -65,7 +65,7 @@ const zh = text(readmeZh);
 for (const command of subcommands) {
   const missing = [];
   if (!en.includes(`fuguectl ${command}`)) missing.push("README.md");
-  if (!zh.includes(`fuguectl ${command}`)) missing.push("README_ZH.md");
+  if (!zh.includes(`fuguectl ${command}`)) missing.push("README.zh-CN.md");
   if (missing.length === 0) ok(`subcommand '${command}' documented`);
   else
     no(
@@ -88,7 +88,7 @@ if (zh.includes(`${String(subcommands.length)} 个子命令`))
   );
 else
   no(
-    `${basename(readmeZh)}: did not find '${String(subcommands.length)} 个子命令' (actual ${String(subcommands.length)}; fix README_ZH's subcommand count)`,
+    `${basename(readmeZh)}: did not find '${String(subcommands.length)} 个子命令' (actual ${String(subcommands.length)}; fix README.zh-CN's subcommand count)`,
   );
 
 const testSuites = readdirSync(fugueDir).filter((file) =>
@@ -105,7 +105,7 @@ if (zh.includes(`${String(testSuites)} 套测试`))
   ok(`${basename(readmeZh)}: test-suite-count claim = ${String(testSuites)}`);
 else
   no(
-    `${basename(readmeZh)}: did not find '${String(testSuites)} 套测试' (actual ${String(testSuites)}; fix README_ZH's test-suite count)`,
+    `${basename(readmeZh)}: did not find '${String(testSuites)} 套测试' (actual ${String(testSuites)}; fix README.zh-CN's test-suite count)`,
   );
 
 const selfCliText = text(selfCli);

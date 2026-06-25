@@ -1,19 +1,18 @@
+<div align="center">
+
+[![English](https://img.shields.io/badge/Language-English-2ea44f?style=for-the-badge)](README.md) &nbsp; [![中文](https://img.shields.io/badge/%E8%AF%AD%E8%A8%80-%E4%B8%AD%E6%96%87-555555?style=for-the-badge)](README.zh-CN.md)
+
 # fugue
 
-[![CI](https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml/badge.svg)](https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%E2%89%A518.18-339933.svg)](package.json)
-[![Tests](https://img.shields.io/badge/tests-263%20passing-success.svg)](orchestration/fuguectl)
-
-**English | [简体中文](README_ZH.md)**
+### Governed multi-agent coding, no coordinator training required.
 
 <p align="center">
-  <strong>Governed multi-agent coding, no coordinator training required.</strong>
-</p>
-
-<p align="center">
-  fugue turns a model fleet into a reliable coding loop: plan, dispatch, cache,
-  integrate, review, repair, and improve the harness itself.
+  <img src="https://img.shields.io/badge/Runtime-Node%20%E2%89%A518.18-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js >= 18.18" />
+  <img src="https://img.shields.io/badge/Engine-TypeScript-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript engine" />
+  <img src="https://img.shields.io/badge/fuguectl-20%20suites-7c3aed?style=for-the-badge" alt="20 fuguectl test suites" />
+  <img src="https://img.shields.io/badge/assertions-263-brightgreen?style=for-the-badge" alt="263 fuguectl assertions" />
+  <a href="https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/BicaMindLabs/open-sakanafugu/ci.yml?branch=main&style=for-the-badge&label=CI" alt="CI status" /></a>
+  <img src="https://img.shields.io/badge/license-Apache--2.0-yellowgreen?style=for-the-badge" alt="Apache-2.0 license" />
 </p>
 
 <p align="center">
@@ -28,6 +27,11 @@
 <p align="center">
   <img src="docs/readme-overview-en.svg" alt="fugue governed multi-agent coding overview" width="920">
 </p>
+
+</div>
+
+> fugue turns a model fleet into a reliable coding loop: plan, dispatch, cache,
+> integrate, review, repair, and improve the harness itself.
 
 ## Highlights
 
@@ -148,7 +152,7 @@ Read the full walkthrough in [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
 `engine/` is the typed implementation: strict TypeScript, ports-and-adapters
 layering, pure domain policy, and real harness/storage adapters.
-`AgentRegistry` is the engine-native step away from shell-only orchestration:
+`AgentRegistry` is the engine-native step away from script-first orchestration:
 the coordinator can dispatch one round across `fugue-cc`, Codex, and OpenCode
 by resolving logical agent ids to runtime profiles.
 
@@ -215,7 +219,7 @@ The strict JSON spec, editable surfaces, validation rules, and smoke tests are i
 | ------------------------------ | ------------------------------------------------------------------------------------ |
 | `backends/bin/`                | Model launchers, registry, `cc-models`, and `cc-sync`.                               |
 | `backends/{install,verify}.ts` | Local install and launcher verification.                                             |
-| `orchestration/fuguectl/`      | `fuguectl`, shell libraries, templates, workspaces, skill bundle, and tests.         |
+| `orchestration/fuguectl/`      | Node `fuguectl` wrappers, templates, workspaces, skill bundle, and tests.            |
 | `orchestration/fugue-cc/`      | Sanitized provider configuration template for the runtime bridge.                    |
 | `orchestration/cn-plugin/`     | Claude Code `/cn:*` plugin and dispatch agent.                                       |
 | `orchestration/agent-team/`    | Higher-level multi-model planning example.                                           |
@@ -252,6 +256,7 @@ Root npm scripts mirror the same gates:
 ```bash
 npm run ci
 npm run ci:clean
+npm run lint:launchers
 npm run test:fuguectl
 npm run test:engine
 ```

@@ -90,7 +90,7 @@ suite.ok(
 );
 
 suite.ok("no goal → non-0", () => run(plan, []).status !== 0);
-suite.ok("shell delegates to engine CLI", () =>
+suite.ok("wrapper delegates to engine CLI", () =>
   readFileSync(process.env.FUGUE_PLAN_CALLS, "utf8").includes(
     "plan build a login feature --models cc-a,cc-b\n",
   ),

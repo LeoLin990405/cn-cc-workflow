@@ -102,7 +102,7 @@ suite.ok(
   "--set without = → non-0",
   () => run(template, ["impl", "--set", "BADFORMAT"]).status !== 0,
 );
-suite.ok("shell delegates to engine CLI", () =>
+suite.ok("wrapper delegates to engine CLI", () =>
   readFileSync(calls, "utf8").includes(
     "template impl --set ROLE=backend --set SCOPE=write-parser --set FILES=src/p.py\n",
   ),

@@ -1,18 +1,18 @@
+<div align="center">
+
+[![English](https://img.shields.io/badge/Language-English-555555?style=for-the-badge)](README.md) &nbsp; [![中文](https://img.shields.io/badge/%E8%AF%AD%E8%A8%80-%E4%B8%AD%E6%96%87-2ea44f?style=for-the-badge)](README.zh-CN.md)
+
 # fugue
 
-[![CI](https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml/badge.svg)](https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%E2%89%A518.18-339933.svg)](package.json)
-[![Tests](https://img.shields.io/badge/tests-263%20passing-success.svg)](orchestration/fuguectl)
-
-**[English](README.md) | 简体中文**
+### 免训练的多 agent 编码编排，把模型 fleet 变成可治理 loop。
 
 <p align="center">
-  <strong>免训练的多 agent 编码编排，把模型 fleet 变成可治理 loop。</strong>
-</p>
-
-<p align="center">
-  fugue 负责规划、派发、缓存、整合、审查、修复，并让 harness 自己从失败中改进。
+  <img src="https://img.shields.io/badge/Runtime-Node%20%E2%89%A518.18-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js >= 18.18" />
+  <img src="https://img.shields.io/badge/Engine-TypeScript-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript engine" />
+  <img src="https://img.shields.io/badge/fuguectl-20%20%E5%A5%97%E6%B5%8B%E8%AF%95-7c3aed?style=for-the-badge" alt="20 套 fuguectl 测试" />
+  <img src="https://img.shields.io/badge/assertions-263-brightgreen?style=for-the-badge" alt="263 个 fuguectl 断言" />
+  <a href="https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/BicaMindLabs/open-sakanafugu/ci.yml?branch=main&style=for-the-badge&label=CI" alt="CI status" /></a>
+  <img src="https://img.shields.io/badge/license-Apache--2.0-yellowgreen?style=for-the-badge" alt="Apache-2.0 license" />
 </p>
 
 <p align="center">
@@ -27,6 +27,10 @@
 <p align="center">
   <img src="docs/readme-overview-zh.svg" alt="fugue 多 agent 编码总览" width="920">
 </p>
+
+</div>
+
+> fugue 负责规划、派发、缓存、整合、审查、修复，并让 harness 自己从失败中改进。
 
 ## 亮点
 
@@ -127,7 +131,7 @@ fuguectl loop decide
 
 ## TypeScript Engine
 
-`engine/` 是 typed 实现：严格 TypeScript、ports-and-adapters 分层、纯 domain policy，以及真实 harness / storage adapters。`AgentRegistry` 是从 shell-only 编排走向 engine-native 编排的一步：coordinator 能在同一轮里把逻辑 agent id 解析到 `fugue-cc`、Codex 和 OpenCode runtime profile。
+`engine/` 是 typed 实现：严格 TypeScript、ports-and-adapters 分层、纯 domain policy，以及真实 harness / storage adapters。`AgentRegistry` 是从 script-first 编排走向 engine-native 编排的一步：coordinator 能在同一轮里把逻辑 agent id 解析到 `fugue-cc`、Codex 和 OpenCode runtime profile。
 
 ```bash
 cd engine
@@ -188,7 +192,7 @@ node dist/cli/main.js self-harness run \
 | ------------------------------ | ---------------------------------------------------------------------------------- |
 | `backends/bin/`                | 模型启动器、registry、`cc-models` 和 `cc-sync`。                                   |
 | `backends/{install,verify}.ts` | 本地安装和 launcher 验证。                                                         |
-| `orchestration/fuguectl/`      | `fuguectl`、shell libraries、templates、workspaces、skill bundle 和测试。          |
+| `orchestration/fuguectl/`      | Node `fuguectl` wrappers、templates、workspaces、skill bundle 和测试。             |
 | `orchestration/fugue-cc/`      | runtime bridge 使用的脱敏 provider 配置模板。                                      |
 | `orchestration/cn-plugin/`     | Claude Code `/cn:*` 插件和 dispatch agent。                                        |
 | `orchestration/agent-team/`    | 更高层多模型规划示例。                                                             |
@@ -225,6 +229,7 @@ make help        # 列出所有 make targets
 ```bash
 npm run ci
 npm run ci:clean
+npm run lint:launchers
 npm run test:fuguectl
 npm run test:engine
 ```

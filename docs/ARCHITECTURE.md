@@ -1,12 +1,12 @@
 # fugue engine — architecture
 
-> Status: **design v2 (iter0, Codex-reviewed)**. The target the bash tools migrate toward, and the single source of truth for the TypeScript rewrite; code that disagrees with it is a bug in one of the two.
+> Status: **design v2 + Node cutover**. This began as the target for the TypeScript rewrite; today the repo has no tracked `.sh` scripts, `fuguectl` is a Node wrapper surface, and the strict TypeScript engine is the source of truth for orchestration behavior.
 
 ## 1. Vision
 
 Sakana Fugu puts _many models behind one API_ and lets a **trained** coordinator (TRINITY / Conductor) decide who does what. fugue is the **training-free, self-hostable** analogue: many agents behind **one typed engine**, orchestrated by **composable strategies** instead of a learned 0.6B model.
 
-The rewrite makes that literally true in code. Borrowed ideas stop being ad-hoc bash and become **first-class, swappable abstractions**. "Our own thing" is the _composition_: a Coordinator wiring ports together, any one replaceable without touching the rest.
+The rewrite makes that literally true in code. Borrowed ideas stop being ad-hoc scripts and become **first-class, swappable abstractions**. "Our own thing" is the _composition_: a Coordinator wiring ports together, any one replaceable without touching the rest.
 
 ## 2. Layering (ports & adapters, corrected)
 
@@ -249,15 +249,15 @@ Higher modes (goal-mode, planning-panel, Conductor-style recursion) are other Ph
 
 CLI-surface homes for the rest: `task`→audit/`Run` facade · `template`→`ContextAssembler` · `run`/`summary`→`Run`/`RunEvent` projections · `fleet`→`Harness.health` + launcher adapter · `doctor`→recon over `Harness.health`+gates · `runtime`→provider maintenance (`runtime` alias) · `self-harness`→spec-driven harness evolution.
 
-## 7. Migration plan (incremental, bash stays green)
+## 7. Migration plan (cut over)
 
-Bash `fuguectl` works and is tested at every step. Migrate **capability by capability** (port + adapter + tests + CLI), engine opt-in (`FUGUE_ENGINE=1`) until parity; [PARITY.md](PARITY.md) tracks each.
+The migration was done **capability by capability** (port + adapter + tests + CLI), keeping the operator green at every step. [PARITY.md](PARITY.md) now tracks the post-cutover status: every production `fuguectl` command is a Node wrapper over the tested engine CLI, and `npm run lint:launchers` fails if a tracked shell script returns.
 
 1. **iter0** — this doc + skeleton (strict tsconfig, tsup, vitest, eslint, clipanion; `domain/` values+ports compiling; CI `test:engine`).
-2. **iter1** — **`RunState + ResultStore + Barrier`** (proves durable state, injected IO, timeout/cancel semantics, and the central join invariant against bash parity). Property-tested with fast-check.
+2. **iter1** — **`RunState + ResultStore + Barrier`** (proves durable state, injected IO, timeout/cancel semantics, and the central join invariant against the legacy operator). Property-tested with fast-check.
 3. **iter1.5** — `AllocationStrategy` (+ all three adapters) with full `record/feed/stats/decay --sample` parity; property tests for ranking invariants.
 4. **iter2+** — `ReviewLoop`, `QualityGate`/`PolicyEvaluator`, `Integrator`/`VcsPort`, `Workspace`/`ContextAssembler`, `ExperienceStore`, `SkillCatalog`/`Injector`, `Harness` adapters, then the `Coordinator`.
-5. **cutover** — at parity the bash tool becomes a shim or is removed; selftest/check-docs move to the TS suite.
+5. **cutover** — legacy shell scripts removed; selftest/check-docs now use the Node suite.
 
 ## 8. Engineering standards (the "deep" in deeply engineered)
 
@@ -265,7 +265,7 @@ Bash `fuguectl` works and is tested at every step. Migrate **capability by capab
 - **Layering enforced** — `domain` imports nothing outward; one composition root; adapters isolated. (lint `no-restricted-imports`.)
 - **Result types at edges**; no throwing across a port for expected failure.
 - **Pure core, injected IO** — `Clock`/`FileSystem`/`Rng` injected and narrow, so Thompson Sampling and barrier timeouts are deterministically testable.
-- **Tests co-located** (vitest), **property tests** (fast-check) for strategies/barrier/loop invariants; ≥ bash coverage before cutover.
+- **Tests co-located** (vitest), **property tests** (fast-check) for strategies/barrier/loop invariants; Node selftests cover the operator surface after cutover.
 - **Secrets unchanged** — keys only in `~/.config/cc-model-secrets.env`; scan gate covers `engine/`.
 - **No Gemini** — a `Policy`, not a convention.
 

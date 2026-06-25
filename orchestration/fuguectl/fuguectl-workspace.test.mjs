@@ -103,7 +103,7 @@ suite.ok(
 suite.ok("no subcommand → shows help(incl list)", () =>
   run(workspace, []).stdout.includes("list"),
 );
-suite.ok("shell delegates to engine CLI", () =>
+suite.ok("wrapper delegates to engine CLI", () =>
   readFileSync(calls, "utf8").includes("workspace context code --task doX\n"),
 );
 

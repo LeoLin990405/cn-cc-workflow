@@ -15,7 +15,7 @@ This doc is the **stable contract** downstream depends on.
 | Fleet lifecycle             | `fuguectl fleet status\|up\|down`                                | strips `CLAUDE_CODE_*` + detached tmux / pty.fork for the `fugue-cc` runtime |
 | Preflight gate              | `fuguectl preflight`                                             | deps · provider mount/config sanity · **no-Gemini guard**                    |
 
-All of the above are plain bash on `$PATH` (install the skill or add `orchestration/fuguectl/` to `$PATH`) — language-agnostic, callable from a Node/Go/Python framework via `child_process`/`exec`.
+All of the above are plain CLI commands on `$PATH` (install the skill or add `orchestration/fuguectl/` to `$PATH`) — language-agnostic, callable from a Node/Go/Python framework via `child_process`/`exec`.
 
 ## Shared policy
 

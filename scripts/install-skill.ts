@@ -51,7 +51,7 @@ try {
 }
 
 for (const file of readdirSync(dest)) {
-  if (!file.endsWith(".sh") && !/^fuguectl-[a-z]+$/u.test(file)) continue;
+  if (!/^fuguectl-[a-z]+$/u.test(file)) continue;
   try {
     chmodSync(join(dest, file), 0o755);
   } catch {

@@ -173,7 +173,7 @@ suite.ok("show prints record", () =>
 suite.ok("workspace context injects experience", () =>
   run(workspace, ["context", "code"]).stdout.includes("defensive copy"),
 );
-suite.ok("shell delegates to engine CLI", () =>
+suite.ok("wrapper delegates to engine CLI", () =>
   readFileSync(process.env.FUGUE_EXPERIENCE_CALLS, "utf8").includes(
     "experience add code defensive-copy-trick\n",
   ),

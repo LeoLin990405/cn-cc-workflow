@@ -24,9 +24,9 @@
     "install:skill": "node scripts/run-ts.mjs scripts/install-skill.ts",
     "verify:launchers": "node scripts/run-ts.mjs backends/verify.ts",
     "scan": "node scripts/run-ts.mjs scripts/scan-secrets.ts",
-    "lint:shell": "node scripts/run-ts.mjs scripts/check-shell.ts",
+    "lint:launchers": "node scripts/run-ts.mjs scripts/check-launchers.ts",
     "check:docs": "node scripts/run-ts.mjs scripts/check-docs.ts",
-    "ci": "npm run scan && npm run lint:shell && npm run check:docs && npm test && npm run test:engine",
-    "ci:clean": "npm run scan && npm run lint:shell && npm run check:docs && npm test && npm run test:engine:ci"
+    "ci": "npm run scan && npm run lint:launchers && npm run check:docs && npm test && npm run test:engine",
+    "ci:clean": "npm run scan && npm run lint:launchers && npm run check:docs && npm test && npm run test:engine:ci"
   }
 }

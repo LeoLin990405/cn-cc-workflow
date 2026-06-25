@@ -43,7 +43,7 @@ suite.ok("quiet summary survives", () =>
 
 const top = run(fuguectl, ["doctor", "--quiet"]).stdout;
 suite.ok("top-level doctor entrypoint works", () => top.includes("fugue-cc=1"));
-suite.ok("shell delegates to engine CLI", () =>
+suite.ok("wrapper delegates to engine CLI", () =>
   readFileSync(calls, "utf8").includes("doctor --quiet\n"),
 );
 

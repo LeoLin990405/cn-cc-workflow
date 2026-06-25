@@ -26,12 +26,12 @@ repos:
         language: system
         pass_filenames: false
 
-      - id: check-shell
-        name: launcher syntax + shellcheck
-        entry: node scripts/run-ts.mjs scripts/check-shell.ts
+      - id: check-launchers
+        name: launcher syntax + no shell scripts
+        entry: node scripts/run-ts.mjs scripts/check-launchers.ts
         language: system
         pass_filenames: false
-        files: '(-code|\.sh)$'
+        files: "(backends/bin/|orchestration/fuguectl/|scripts/check-launchers.ts|\\.sh$)"
 
       - id: cn-plugin-test
         name: cn-plugin tests

@@ -4,7 +4,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 
 const root = resolve(
-  dirname(process.argv[1] ?? "scripts/check-shell.ts"),
+  dirname(process.argv[1] ?? "scripts/check-launchers.ts"),
   "..",
 );
 

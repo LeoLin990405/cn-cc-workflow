@@ -50,10 +50,10 @@ dispatch time.
 The TypeScript parser is `parseAgentRegistryJson`; the starter JSON is generated
 by `renderAgentRegistryTemplate`. Both are exported from `@bicamindlabs/fugue-engine`.
 
-## Shell Bridge
+## Operator Bridge
 
-The production shell operator exposes the same registry shape while the CLI
-surface migrates command by command:
+The production `fuguectl` operator exposes the same registry shape as the
+engine:
 
 ```bash
 fuguectl agents template > agents.json
@@ -62,11 +62,12 @@ fuguectl agents list agents.json
 fuguectl agents resolve agents.json coder
 ```
 
-The shell helper is intentionally small: it gives operators a durable `.sh`
-entry point for registry files, while the engine remains the canonical place for
-typed routing and coordinator behavior. The `agents`, `task`, `template`,
+The wrappers are intentionally small Node entry points. They give operators a
+stable `fuguectl` command surface, while the engine remains the canonical place
+for typed routing and coordinator behavior. The `agents`, `task`, `template`,
 `workspace`, `experience`, `summary`, `runtime`, `run`, `loop`, `allocate`,
-`dispatch`, `integrate`, `fleet`, `skills`, `preflight`, `cache`, `plan`, `doctor`, and `goal` operator scripts now delegate to the built engine CLI at
+`dispatch`, `integrate`, `fleet`, `skills`, `preflight`, `cache`, `plan`,
+`doctor`, and `goal` operator wrappers delegate to the built engine CLI at
 `engine/dist/cli/main.js`; set `FUGUE_ENGINE_CLI` to override that path.
 
 ## Dispatch Semantics
@@ -92,18 +93,15 @@ an innocuous id with `"modelFamily": "gemini"` is still blocked by the
 no-Gemini rule. This matters because runtime-specific target strings are often
 too short or too provider-shaped to carry policy safely by themselves.
 
-## Shell Migration
+## Cutover Status
 
-The bash `fuguectl` surface remains the stable operator layer until each command
-has a tested TypeScript slice. New orchestration primitives should be added to
-the engine first:
+The repository now has no tracked `.sh` scripts. New orchestration primitives
+should continue to land in the engine first:
 
 - registry parsing and validation in pure domain code;
 - runtime selection in `Coordinator`;
 - CLI commands as thin wrappers over tested engine functions;
-- shell scripts only as compatibility shims, local installers, or provider
-  launchers where the runtime itself is shell-native.
+- executable wrapper files only when they delegate to tested TypeScript.
 
-The goal is not to delete useful scripts prematurely. The goal is to make the
-state machine, policy, routing, and dispatch semantics replayable from typed
-code, then retire bash where the engine has equal or better coverage.
+The migration goal is now enforced by `npm run lint:launchers`: Node launchers
+must parse, and any newly tracked shell script fails the gate.
