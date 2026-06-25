@@ -8,19 +8,19 @@ help: ## List available targets
 	  awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-14s\033[0m %s\n",$$1,$$2}'
 
 install: ## Install launchers to ~/bin (mirrors backends/bin)
-	./backends/install.sh
+	npm run install:backends
 
 install-cc: ## Install launchers and put pinned claude-code into each env
-	./backends/install.sh --install-claude-code
+	npm run install:backends -- --install-claude-code
 
 verify: ## Launcher self-test + cc-models doctor
-	./backends/verify.sh && cc-models doctor
+	npm run verify:launchers && cc-models doctor
 
 doctor: ## Environment recon + workflow recommendation (run on any machine)
 	bash orchestration/fuguectl/fuguectl doctor
 
 install-skill: ## Install as a Claude Code skill (~/.claude/skills/fugue, backs up first if present)
-	bash scripts/install-skill.sh
+	npm run install:skill
 
 test: ## Run plugin + fuguectl tests
 	npm test
