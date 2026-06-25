@@ -7,6 +7,7 @@ import { Cli } from 'clipanion';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { FsRunStore } from '../adapters/store/fs-run-store.js';
+import { parseAgentRegistryJson } from '../domain/agent-registry.js';
 import type { HarnessConfig } from '../domain/self-harness.js';
 import { EDITABLE_SURFACES } from '../domain/self-harness.js';
 import { parseSelfHarnessSpec } from '../domain/self-harness-spec.js';
@@ -106,6 +107,53 @@ describe('fugue CLI', () => {
       const { code, out } = await run(['task', 'new', 'a task', '--priority', 'P0']);
       expect(code).toBe(0);
       expect(out).toContain('TASK-');
+    });
+  });
+
+  describe('agent-registry', () => {
+    let dir: string;
+    beforeEach(async () => {
+      dir = await mkdtemp(join(tmpdir(), 'fugue-agent-registry-'));
+    });
+    afterEach(async () => {
+      await rm(dir, { recursive: true, force: true });
+    });
+
+    it('template prints parseable registry JSON', async () => {
+      const { code, out } = await run(['agent-registry', 'template']);
+
+      expect(code).toBe(0);
+      expect(out).toContain('"agents"');
+      expect(out).toContain('"codex"');
+      expect(parseAgentRegistryJson(out).ok).toBe(true);
+    });
+
+    it('validates, lists, and resolves a registry file', async () => {
+      const template = await run(['agent-registry', 'template']);
+      const registry = join(dir, 'agents.json');
+      await writeFile(registry, template.out, 'utf8');
+
+      const valid = await run(['agent-registry', 'validate', registry]);
+      const list = await run(['agent-registry', 'list', registry]);
+      const resolved = await run(['agent-registry', 'resolve', registry, 'coder']);
+
+      expect(valid.code).toBe(0);
+      expect(valid.out).toContain('OK agent registry valid');
+      expect(list.code).toBe(0);
+      expect(list.out).toContain('coder\tcodex\tgpt-5.5');
+      expect(resolved.code).toBe(0);
+      expect(resolved.out).toContain('harness\tcodex');
+      expect(resolved.out).toContain('target\tgpt-5.5');
+    });
+
+    it('rejects invalid registry JSON', async () => {
+      const registry = join(dir, 'bad.json');
+      await writeFile(registry, '{ nope', 'utf8');
+
+      const { code, err } = await run(['agent-registry', 'validate', registry]);
+
+      expect(code).toBe(1);
+      expect(err).toContain('invalid JSON:');
     });
   });
 

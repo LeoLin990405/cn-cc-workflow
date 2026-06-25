@@ -20,6 +20,7 @@ echo "fuguectl-e2e tests"
 help_out="$(bash "$F" help)"
 ok "help lists subcommands" '[[ "$help_out" == *"fuguectl doctor"* ]]'
 ok "help lists runtime entrypoint" '[[ "$help_out" == *"fuguectl runtime"* ]]'
+ok "help lists agents entrypoint" '[[ "$help_out" == *"fuguectl agents"* ]]'
 ok "help does not leak script body" '[[ "$help_out" != *"set -uo pipefail"* ]]'
 fuguectl_ws_out="$(bash "$F" workspace list)"
 ok "fuguectl dispatches commands" 'grep -q "^  code" <<<"$fuguectl_ws_out"'

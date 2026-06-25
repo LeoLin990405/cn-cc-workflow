@@ -8,7 +8,7 @@ This doc is the **stable contract** downstream depends on.
 
 | Capability                  | Interface                                                        | Notes                                                                        |
 | --------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Runtime profiles            | `cc-*` launchers, Codex models, OpenCode provider/model targets  | `AgentRegistry` maps logical ids to harness-native targets                   |
+| Runtime profiles            | `fuguectl agents template\|validate\|list\|resolve`              | `AgentRegistry` maps logical ids to harness-native targets                   |
 | Harness-agnostic dispatch   | `fuguectl dispatch <target> --harness fugue-cc\|codex\|opencode` | one call dispatches an implementer on any supported harness                  |
 | Bench-driven model choice   | `fuguectl allocate <task-type> [--top]`                          | task-type → recommended model                                                |
 | Result cache + join barrier | `fuguectl cache …`                                               | dispatch N ⇒ return N before next round                                      |

@@ -3,7 +3,7 @@
 [![CI](https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml/badge.svg)](https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518.18-339933.svg)](package.json)
-[![Tests](https://img.shields.io/badge/tests-322%20passing-success.svg)](orchestration/fuguectl)
+[![Tests](https://img.shields.io/badge/tests-333%20passing-success.svg)](orchestration/fuguectl)
 
 **[English](README.md) | 简体中文**
 
@@ -114,16 +114,16 @@ fuguectl loop decide
 
 ## 命令面
 
-`orchestration/fuguectl/fuguectl` 是生产操作入口。当前有 18 个子命令和 18 套测试。
+`orchestration/fuguectl/fuguectl` 是生产操作入口。当前有 19 个子命令和 19 套测试。
 
-| 区域                   | 命令                                                                                                                                                         |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Setup and recon        | `fuguectl doctor`、`fuguectl preflight`、`fuguectl fleet status\|up\|down`                                                                                   |
-| Planning               | `fuguectl task new\|log\|done`、`fuguectl template <name>`、`fuguectl plan "<goal>"`、`fuguectl goal template\|show\|check`                                  |
-| Routing and context    | `fuguectl allocate <type>`、`fuguectl workspace list\|show\|model\|context`、`fuguectl skills index\|list\|match\|show\|inject\|validate\|forge`             |
-| Dispatch and gather    | `fuguectl dispatch <target>`、`fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                     |
-| Integration and loop   | `fuguectl integrate --work <repo>`、`fuguectl loop init\|record\|decide\|status`、`fuguectl run set\|round\|status\|next\|clear`、`fuguectl summary <round>` |
-| Memory and maintenance | `fuguectl experience add\|list\|recall\|show`、`fuguectl runtime check\|adapt`、`fuguectl selftest`                                                          |
+| 区域                   | 命令                                                                                                                                                                                                  |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Setup and recon        | `fuguectl doctor`、`fuguectl preflight`、`fuguectl fleet status\|up\|down`                                                                                                                            |
+| Planning               | `fuguectl task new\|log\|done`、`fuguectl template <name>`、`fuguectl plan "<goal>"`、`fuguectl goal template\|show\|check`                                                                           |
+| Routing and context    | `fuguectl allocate <type>`、`fuguectl workspace list\|show\|model\|context`、`fuguectl agents template\|validate\|list\|resolve`、`fuguectl skills index\|list\|match\|show\|inject\|validate\|forge` |
+| Dispatch and gather    | `fuguectl dispatch <target>`、`fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                                                              |
+| Integration and loop   | `fuguectl integrate --work <repo>`、`fuguectl loop init\|record\|decide\|status`、`fuguectl run set\|round\|status\|next\|clear`、`fuguectl summary <round>`                                          |
+| Memory and maintenance | `fuguectl experience add\|list\|recall\|show`、`fuguectl runtime check\|adapt`、`fuguectl selftest`                                                                                                   |
 
 ## TypeScript Engine
 
@@ -143,6 +143,7 @@ fugue version
 fugue doctor
 fugue task new|log|done
 fugue goal check <spec>
+fugue agent-registry template|validate|list|resolve
 fugue self-harness template|run
 ```
 

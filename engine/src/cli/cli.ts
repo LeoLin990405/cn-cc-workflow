@@ -1,6 +1,12 @@
 import { Builtins, Cli } from 'clipanion';
 
 import { VERSION } from '../index.js';
+import {
+  AgentRegistryListCommand,
+  AgentRegistryResolveCommand,
+  AgentRegistryTemplateCommand,
+  AgentRegistryValidateCommand,
+} from './commands/agent-registry.js';
 import { DoctorCommand } from './commands/doctor.js';
 import { GoalCheckCommand } from './commands/goal.js';
 import { SelfHarnessRunCommand, SelfHarnessTemplateCommand } from './commands/self-harness.js';
@@ -25,6 +31,10 @@ export const buildCli = (): Cli => {
   cli.register(TaskLogCommand);
   cli.register(TaskDoneCommand);
   cli.register(GoalCheckCommand);
+  cli.register(AgentRegistryTemplateCommand);
+  cli.register(AgentRegistryValidateCommand);
+  cli.register(AgentRegistryListCommand);
+  cli.register(AgentRegistryResolveCommand);
   cli.register(SelfHarnessTemplateCommand);
   cli.register(SelfHarnessRunCommand);
   return cli;

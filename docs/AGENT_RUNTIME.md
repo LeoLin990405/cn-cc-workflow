@@ -50,6 +50,22 @@ dispatch time.
 The TypeScript parser is `parseAgentRegistryJson`; the starter JSON is generated
 by `renderAgentRegistryTemplate`. Both are exported from `@bicamindlabs/fugue-engine`.
 
+## Shell Bridge
+
+The production shell operator exposes the same registry shape while the CLI
+surface migrates command by command:
+
+```bash
+fuguectl agents template > agents.json
+fuguectl agents validate agents.json
+fuguectl agents list agents.json
+fuguectl agents resolve agents.json coder
+```
+
+The shell helper is intentionally small: it gives operators a durable `.sh`
+entry point for registry files, while the engine remains the canonical place for
+typed routing and coordinator behavior.
+
 ## Dispatch Semantics
 
 `Coordinator` accepts the registry through `CoordinatorDeps.agentRegistry` or
