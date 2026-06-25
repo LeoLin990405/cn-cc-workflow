@@ -8,6 +8,14 @@ export interface RuntimeSyncOptions {
   readonly stampPath: string;
 }
 
+export const parseProviderVersion = (output: string): string =>
+  output.match(/v[0-9]+\.[0-9]+\.[0-9]+/u)?.[0] ?? output.trim();
+
+export const parseProviderInstallPath = (output: string): string | null => {
+  const match = /^Install path:\s*(.+)$/mu.exec(output);
+  return match?.[1]?.trim() ?? null;
+};
+
 /** Detects + records provider version drift for the fugue-cc runtime. */
 export class RuntimeSync {
   private readonly bin: string;
@@ -23,8 +31,13 @@ export class RuntimeSync {
   }
 
   async currentVersion(): Promise<string> {
-    const result = await this.runner.run(this.bin, ['--version']);
-    return result.stdout.trim();
+    try {
+      const result = await this.runner.run(this.bin, ['version']);
+      if (result.code !== 0) return '';
+      return parseProviderVersion(result.stdout);
+    } catch {
+      return '';
+    }
   }
 
   async check(): Promise<VersionDrift> {

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable, Writable } from 'node:stream';
@@ -259,6 +259,128 @@ describe('fugue CLI', () => {
 
       expect(summary.code).toBe(2);
       expect(summary.err).toContain('round-9 not init');
+    });
+  });
+
+  describe('runtime commands', () => {
+    let dir: string;
+    let bin: string;
+    let install: string;
+    let state: string;
+    let work: string;
+    let preflight: string;
+    let calls: string;
+
+    beforeEach(async () => {
+      dir = await mkdtemp(join(tmpdir(), 'fugue-runtime-'));
+      bin = join(dir, 'fugue-cc');
+      install = join(dir, 'install');
+      state = join(dir, 'state');
+      work = join(dir, 'work');
+      preflight = join(dir, 'preflight.sh');
+      calls = join(dir, 'calls.txt');
+      await mkdir(join(install, 'lib/provider_profiles'), { recursive: true });
+      await mkdir(join(work, '.fugue-cc'), { recursive: true });
+      await writeFile(join(install, 'lib/provider_profiles/api_shortcuts.py'), '', 'utf8');
+      await writeFile(
+        join(work, '.fugue-cc/provider.config'),
+        '[agents.cc]\nmodel = "deepseek"\n',
+        'utf8',
+      );
+      await writeFile(
+        bin,
+        [
+          '#!/usr/bin/env bash',
+          'case "$1" in',
+          `  version) echo "fugue-cc runtime v9.9.9 abc"; echo "Install path: ${install}";;`,
+          `  kill) echo "kill:$PWD" >> "${calls}";;`,
+          '  *) exit 0;;',
+          'esac',
+          '',
+        ].join('\n'),
+        'utf8',
+      );
+      await chmod(bin, 0o755);
+      await writeFile(preflight, '#!/usr/bin/env bash\necho "config OK: $3"\n', 'utf8');
+    });
+
+    afterEach(async () => {
+      await rm(dir, { recursive: true, force: true });
+    });
+
+    it('checks drift, adapts, records the stamp, and reports grafting loss', async () => {
+      const check = await run([
+        'runtime',
+        'check',
+        '--bin',
+        bin,
+        '--state',
+        state,
+        '--install',
+        install,
+      ]);
+      const dry = await run([
+        'runtime',
+        'adapt',
+        '--bin',
+        bin,
+        '--state',
+        state,
+        '--install',
+        install,
+      ]);
+      const apply = await run([
+        'runtime',
+        'adapt',
+        '--bin',
+        bin,
+        '--state',
+        state,
+        '--install',
+        install,
+        '--work',
+        work,
+        '--preflight-script',
+        preflight,
+        '--apply',
+      ]);
+      const stamp = await readFile(join(state, 'runtime-version'), 'utf8');
+      const killCalls = await readFile(calls, 'utf8');
+      const check2 = await run([
+        'runtime',
+        'check',
+        '--bin',
+        bin,
+        '--state',
+        state,
+        '--install',
+        install,
+      ]);
+
+      await rm(join(install, 'lib/provider_profiles/api_shortcuts.py'));
+      const missingGrafting = await run([
+        'runtime',
+        'check',
+        '--bin',
+        bin,
+        '--state',
+        state,
+        '--install',
+        install,
+      ]);
+
+      expect(check.code).toBe(0);
+      expect(check.out).toContain('version drift');
+      expect(check.out).toContain('grafting api_shortcuts.py present');
+      expect(dry.out).toContain('[dry-run]');
+      expect(dry.out).toContain('stamp not written');
+      expect(apply.out).toContain('config validation');
+      expect(apply.out).toContain('recorded v9.9.9');
+      expect(stamp.trim()).toBe('v9.9.9');
+      expect(killCalls).toContain('kill:');
+      expect(killCalls).toContain('/work');
+      expect(check2.out).toContain('no drift');
+      expect(missingGrafting.out).toContain('api_shortcuts.py is gone');
     });
   });
 
