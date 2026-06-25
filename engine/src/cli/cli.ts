@@ -8,7 +8,7 @@ import {
   AgentRegistryValidateCommand,
 } from './commands/agent-registry.js';
 import { DoctorCommand } from './commands/doctor.js';
-import { GoalCheckCommand } from './commands/goal.js';
+import { GoalCheckCommand, GoalShowCommand, GoalTemplateCommand } from './commands/goal.js';
 import { SelfHarnessRunCommand, SelfHarnessTemplateCommand } from './commands/self-harness.js';
 import { TaskDoneCommand, TaskLogCommand, TaskNewCommand } from './commands/task.js';
 import { VersionCommand } from './commands/version.js';
@@ -30,6 +30,8 @@ export const buildCli = (): Cli => {
   cli.register(TaskNewCommand);
   cli.register(TaskLogCommand);
   cli.register(TaskDoneCommand);
+  cli.register(GoalTemplateCommand);
+  cli.register(GoalShowCommand);
   cli.register(GoalCheckCommand);
   cli.register(AgentRegistryTemplateCommand);
   cli.register(AgentRegistryValidateCommand);

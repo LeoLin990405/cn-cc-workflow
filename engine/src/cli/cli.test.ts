@@ -51,6 +51,13 @@ describe('fugue CLI', () => {
     expect(err).toContain('no goal spec');
   });
 
+  it('prints a goal template', async () => {
+    const { code, out } = await run(['goal', 'template']);
+    expect(code).toBe(0);
+    expect(out).toContain('outcome:');
+    expect(out).toContain('gate:');
+  });
+
   describe('goal check against a real spec', () => {
     let dir: string;
     beforeEach(async () => {
@@ -82,6 +89,20 @@ describe('fugue CLI', () => {
       const { code, out } = await run(['goal', 'check', spec]);
       expect(code).toBe(1);
       expect(out).toContain('GOAL NOT MET');
+    });
+
+    it('shows the parsed goal fields', async () => {
+      const spec = join(dir, 'goal.txt');
+      await writeFile(
+        spec,
+        'outcome: ship it\ngate: true\nrubric: no regression\nrounds: 2\nallocate: manual\n',
+        'utf8',
+      );
+      const { code, out } = await run(['goal', 'show', spec]);
+      expect(code).toBe(0);
+      expect(out).toContain('outcome:  ship it');
+      expect(out).toContain('rounds:   2');
+      expect(out).toContain('allocate: manual');
     });
   });
 

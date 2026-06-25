@@ -5,8 +5,9 @@
 #     # shellcheck source=/dev/null
 #     . "$(dirname "${BASH_SOURCE[0]}")/fuguectl-lib.sh"
 #
-# Provides: die/warn/say messaging, status symbols, portable mtime, and a small
-# on-disk TTL cache layer for slow/idempotent reads (env recon, liveness probes).
+# Provides: die/warn/say messaging, status symbols, portable mtime, a shared
+# TypeScript engine bridge, and a small on-disk TTL cache layer for
+# slow/idempotent reads (env recon, liveness probes).
 # Goal: kill the per-script boilerplate (16 copies of die() etc.) without changing
 # any observable behavior. Safe under `set -u`.
 
@@ -28,6 +29,23 @@ FX_OK="✓"; FX_NO="—"; FX_BAD="✗"; FX_WARN="⚠"
 # fx_mtime <file> → epoch seconds of last modification. GNU first (Linux fleet),
 # then BSD/macOS, then 0. The non-matching variant errors out cleanly (2>/dev/null).
 fx_mtime() { stat -c %Y "${1-}" 2>/dev/null || stat -f %m "${1-}" 2>/dev/null || echo 0; }
+
+# --- TypeScript engine bridge ------------------------------------------------
+# Keep shell entrypoints stable while moving command logic into engine/src/cli.
+fx_repo_root() {
+  local src="${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}"
+  local here
+  here="$(cd "$(dirname "$src")" && pwd)"
+  cd "$here/../.." && pwd
+}
+fx_engine_cli() { printf '%s' "${FUGUE_ENGINE_CLI:-$(fx_repo_root)/engine/dist/cli/main.js}"; }
+fx_run_engine() {
+  local cli root
+  cli="$(fx_engine_cli)"
+  root="$(fx_repo_root)"
+  [ -f "$cli" ] || die "engine CLI not built at $cli (run: cd $root/engine && npm run build)"
+  node "$cli" "$@"
+}
 
 # --- TTL cache layer ---------------------------------------------------------
 # Generic on-disk cache for results that are slow to compute but safe to reuse

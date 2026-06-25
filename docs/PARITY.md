@@ -4,7 +4,7 @@ Tracks the incremental migration (see [ARCHITECTURE.md](ARCHITECTURE.md) §5). T
 
 Legend: `bash ✓` shipped in shell · `ts …` engine status (`◐ core` = ports+adapters landed & tested · `+ cli` = a `fugue` CLI command now drives that core) · **cutover** = bash retired/shimmed.
 
-The TS CLI (`fugue`, clipanion) landed in iter13 as a thin shell over the tested engine — `fugue version`, `fugue doctor`, `fugue task new|log|done`, `fugue goal check <spec>`, and the net-new `fugue self-harness template|run` surface. Build emits `dist/cli/main.js` (shebang preserved → `npx fugue`). Remaining subcommands stay engine-only until wired.
+The TS CLI (`fugue`, clipanion) landed in iter13 as a thin shell over the tested engine — `fugue version`, `fugue doctor`, `fugue task new|log|done`, `fugue goal template|show|check`, and the net-new `fugue self-harness template|run` surface. Build emits `dist/cli/main.js` (shebang preserved → `npx fugue`). Remaining subcommands stay engine-only until wired.
 
 | #   | Capability (bash subcommand)                                 | Primary port                                                             | bash          | ts                                    | cutover |
 | --- | ------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------- | ------------------------------------- | ------- |
@@ -12,7 +12,7 @@ The TS CLI (`fugue`, clipanion) landed in iter13 as a thin shell over the tested
 | 2   | `cache` (+ barrier/collect/resume)                           | `ResultStore` / `Barrier`                                                | ✓             | ◐ core (iter1)                        | ☐       |
 | 3   | `loop` (record/decide/status)                                | `ReviewLoop`                                                             | ✓             | ◐ core (iter2)                        | ☐       |
 | 4   | `preflight` (+ --probe)                                      | `QualityGate` + `Policy` (no-Gemini/gen≠review)                          | ✓             | ◐ core (iter4, deterministic)         | ☐       |
-| 5   | `goal` (template/show/check)                                 | `GoalSpec` + acceptance gate                                             | ✓             | ◐ core + cli `check` (iter13)         | ☐       |
+| 5   | `goal` (template/show/check)                                 | `GoalSpec` + acceptance gate                                             | ✓ shell shim  | ◐ core + cli (iter13)                 | ☑ shim  |
 | 6   | `integrate` (+ --ownership)                                  | `Integrator` + `VcsPort` + ownership                                     | ✓             | ◐ core (iter8)                        | ☐       |
 | 7   | `workspace` (list/show/model/context)                        | `Workspace` / `ContextAssembler`                                         | ✓             | ◐ core (iter6)                        | ☐       |
 | 8   | `experience` (add/recall/...)                                | `ExperienceStore`                                                        | ✓             | ◐ core (iter7)                        | ☐       |
@@ -23,11 +23,11 @@ The TS CLI (`fugue`, clipanion) landed in iter13 as a thin shell over the tested
 | 13  | `plan` (multi-model panel)                                   | planPanel (Harness parallel dispatch)                                    | ✓             | ◐ core (iter11)                       | ☐       |
 | 14  | `run` (set/round/status/next)                                | `RunState` facade (`RunStore`)                                           | ✓             | ◐ core (iter1)                        | ☐       |
 | 15  | `summary`                                                    | observability over `RunState`/`ResultCache`                              | ✓             | ◐ core (iter10)                       | ☐       |
-| 16  | `task` (new/log/done)                                        | `TaskStore` audit trail                                                  | ✓             | ◐ core + cli (iter13)                 | ☐       |
+| 16  | `task` (new/log/done)                                        | `TaskStore` audit trail                                                  | ✓ shell shim  | ◐ core + cli (iter13)                 | ☑ shim  |
 | 17  | `template` (render)                                          | `ContextAssembler` (template part)                                       | ✓             | ◐ core (iter6)                        | ☐       |
 | 18  | `runtime` (check/adapt)                                      | Runtime/provider sync (fugue-cc runtime)                                 | ✓             | ◐ core (iter11)                       | ☐       |
 | —   | `(coordinator)` — wires the ports into the pipeline          | `Coordinator` + `wire.ts`                                                | n/a (driver)  | ◐ core (iter12)                       | ☐       |
-| —   | `agents` / `(agent-registry)` — logical agents over runtimes | `AgentRegistry` + `Coordinator` harness map                              | ✓ shell shim  | ◐ core + cli `agent-registry`         | ☐       |
+| —   | `agents` / `(agent-registry)` — logical agents over runtimes | `AgentRegistry` + `Coordinator` harness map                              | ✓ shell shim  | ◐ core + cli `agent-registry`         | ☑ shim  |
 | —   | `(self-harness)` — self-improving harness loop               | `SelfHarnessLoop` + `WeaknessMiner`/`HarnessProposer`/`HarnessValidator` | n/a (net-new) | ◐ core + live adapters + cli (iter15) | ☐       |
 
 Migration order (riskiest-last): pure strategies/state first (`allocate`, `loop`, `cache`, gates), then stores (`workspace`/`experience`/`skills`), then IO-heavy adapters (`harness`/`fleet`/`dispatch`), then the `Coordinator`.

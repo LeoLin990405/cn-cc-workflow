@@ -1,66 +1,41 @@
 #!/usr/bin/env bash
-# fuguectl-task.sh — TASK file scaffold + log + close-out (replaces hand-copying the TASK template)
+# fuguectl-task.sh — thin shell bridge to the TypeScript TASK commands
 #
 #   new  "<title>" [P0|P1|P2]     create TASK-<date>-<NNN>.md under $TASKS, print path
 #   log  <task-file> "<message>"  append timestamped log to the "Log" section
 #   done <task-file>              Status: DONE + Completed time
 #   env: TASKS = task directory (default ~/.claude/tasks)
+#   env: FUGUE_ENGINE_CLI overrides the built engine CLI path
 set -uo pipefail
 # shellcheck source=/dev/null
 . "$(dirname "${BASH_SOURCE[0]}")/fuguectl-lib.sh"
-TASKS="${TASKS:-$HOME/.claude/tasks}"
-ts(){  TZ="${FUGUE_TZ:-Asia/Shanghai}" date '+%Y-%m-%d %H:%M'; }
-day(){ TZ="${FUGUE_TZ:-Asia/Shanghai}" date '+%Y-%m-%d'; }
-sed_inplace(){ # across GNU/BSD sed
-  if sed --version >/dev/null 2>&1; then sed -i -E "$1" "$2"; else sed -i '' -E "$1" "$2"; fi
-}
 
 cmd_new(){
-  local title="${1:-}" prio="${2:-P1}"
+  local title="${1:-}" prio=""
+  shift || true
   [ -n "$title" ] || die "usage: new <title> [P0|P1|P2]"
-  mkdir -p "$TASKS"
-  local d n=1 f; d="$(day)"
-  while :; do f="$TASKS/TASK-$d-$(printf '%03d' "$n").md"; [ -e "$f" ] || break; n=$((n+1)); done
-  {
-    echo "# TASK-$d-$(printf '%03d' "$n"): $title"
-    echo "Status: IN_PROGRESS"
-    echo "Priority: $prio"
-    echo "Created: $(ts)"
-    echo "Completed: -"
-    echo ""
-    echo "## Requirements"
-    echo "$title"
-    echo ""
-    echo "## Subtasks"
-    echo "- [ ] (task1) — <scope> (Implementer: cc-xxx, file: ...)"
-    echo "- [ ] Final Review (Reviewer: coder)"
-    echo ""
-    echo "## Matrix"
-    echo "| Task | Implementer | Reviewer | Fixer |"
-    echo "|---|---|---|---|"
-    echo "| 1 | cc-xxx | coder | operator Edit patch |"
-    echo ""
-    echo "## Output files"
-    echo "- ..."
-    echo ""
-    echo "## Log"
-  } > "$f"
-  echo "$f"
+  case "$#" in
+    0) fx_run_engine task new "$title";;
+    1) fx_run_engine task new "$title" --priority "$1";;
+    2)
+      [ "${1:-}" = "--priority" ] || die "usage: new <title> [P0|P1|P2]"
+      prio="${2:-}"
+      fx_run_engine task new "$title" --priority "$prio";;
+    *) die "usage: new <title> [P0|P1|P2]";;
+  esac
 }
 
 cmd_log(){
   local f="${1:-}"; shift || true
-  [ -n "$f" ] && [ -f "$f" ] || die "no TASK file: ${f:-(empty)}"
-  printf -- '- [%s] %s\n' "$(ts)" "$*" >> "$f"
-  echo "logged → $f"
+  [ -n "$f" ] || die "usage: log <task-file> <message>"
+  [ "$#" -gt 0 ] || die "usage: log <task-file> <message>"
+  fx_run_engine task log "$f" "$*"
 }
 
 cmd_done(){
   local f="${1:-}"
-  [ -n "$f" ] && [ -f "$f" ] || die "no TASK file: ${f:-(empty)}"
-  sed_inplace "s/^Status: .*/Status: DONE/" "$f"
-  sed_inplace "s/^Completed: .*/Completed: $(ts)/" "$f"
-  echo "DONE → $f"
+  [ -n "$f" ] || die "usage: done <task-file>"
+  fx_run_engine task "done" "$f"
 }
 
 sub="${1:-}"; shift || true
