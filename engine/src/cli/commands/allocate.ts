@@ -1,4 +1,3 @@
-import { homedir } from 'node:os';
 import { join as joinPath } from 'node:path';
 
 import { Command, Option } from 'clipanion';
@@ -15,6 +14,7 @@ import { applyOutcome, decayState, rankAgents } from '../../domain/allocation-sc
 import { NodeFileSystem } from '../../infra/node-file-system.js';
 import { seededRng } from '../../infra/seeded-rng.js';
 import { systemRng, type Rng } from '../../infra/rng.js';
+import { defaultStateDir, fuguectlDir } from '../default-paths.js';
 
 interface ParsedArgs {
   readonly ok: true;
@@ -36,13 +36,10 @@ interface AllocationPaths {
 
 type ParseResult = ParsedArgs | ParseError;
 
-const stateDir = (): string =>
-  process.env.FUGUE_STATE ?? joinPath(joinPath(homedir(), '.config'), 'fugue');
-
 const defaultPaths = (): AllocationPaths => ({
-  table: process.env.FUGUE_ALLOCATION ?? joinPath(process.cwd(), 'allocation.tsv'),
-  stats: process.env.FUGUE_ALLOCATION_STATS ?? joinPath(stateDir(), 'allocation-stats.tsv'),
-  ledger: process.env.FUGUE_ALLOCATION_LEDGER ?? joinPath(stateDir(), 'alloc-ledger.tsv'),
+  table: process.env.FUGUE_ALLOCATION ?? joinPath(fuguectlDir(import.meta.url), 'allocation.tsv'),
+  stats: process.env.FUGUE_ALLOCATION_STATS ?? joinPath(defaultStateDir(), 'allocation-stats.tsv'),
+  ledger: process.env.FUGUE_ALLOCATION_LEDGER ?? joinPath(defaultStateDir(), 'alloc-ledger.tsv'),
 });
 
 const defaultParams = (): AllocationParams => ({

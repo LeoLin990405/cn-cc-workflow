@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { join as joinPath } from 'node:path';
 
@@ -8,6 +7,7 @@ import { FugueCcHarness } from '../../adapters/harness/fugue-cc-harness.js';
 import { DEFAULT_PLAN_AGENTS } from '../../domain/plan.js';
 import { isOk } from '../../domain/result.js';
 import { NodeCommandRunner } from '../../infra/node-command-runner.js';
+import { defaultCacheRoot } from '../default-paths.js';
 
 const parseModels = (raw: string): readonly string[] =>
   raw
@@ -15,22 +15,7 @@ const parseModels = (raw: string): readonly string[] =>
     .map((model) => model.trim())
     .filter((model) => model.length > 0);
 
-const gitRoot = (): string | null => {
-  try {
-    const output = execFileSync('git', ['rev-parse', '--show-toplevel'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
-    return output.length > 0 ? output : null;
-  } catch {
-    return null;
-  }
-};
-
-const defaultCacheRoot = (): string =>
-  process.env.FUGUE_CACHE ?? joinPath(gitRoot() ?? process.cwd(), '.fuguectl-cache');
-
-const defaultPlanOut = (): string => joinPath(defaultCacheRoot(), 'plans');
+const defaultPlanOut = (): string => joinPath(defaultCacheRoot(import.meta.url), 'plans');
 
 const promptFor = (model: string, goal: string, outfile: string): string =>
   [

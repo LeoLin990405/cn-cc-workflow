@@ -16,5 +16,5 @@ set -uo pipefail
 
 case "${1:-}" in
   ''|-h|--help) sed -n '2,13p' "$0";;
-  *) fx_run_engine cache --cache "$(fx_cache_root)" "$@";;
+  *) fx_run_engine cache "$@";;
 esac

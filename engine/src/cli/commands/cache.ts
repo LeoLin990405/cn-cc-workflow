@@ -4,6 +4,7 @@ import { join as joinPath } from 'node:path';
 import { Command, Option } from 'clipanion';
 
 import { NodeFileSystem } from '../../infra/node-file-system.js';
+import { defaultCacheRoot } from '../default-paths.js';
 
 interface ManifestEntry {
   readonly id: string;
@@ -28,9 +29,6 @@ interface BarrierOptions {
 }
 
 type ParseResult = ParsedArgs | ParseError;
-
-const defaultCacheRoot = (): string =>
-  process.env.FUGUE_CACHE ?? joinPath(process.cwd(), '.fuguectl-cache');
 
 const nowSeconds = (): string => String(Math.floor(Date.now() / 1000));
 
@@ -361,7 +359,7 @@ export class CacheCommand extends Command {
       return 0;
     }
 
-    const cache = new LegacyRoundCache(parsed.cache ?? defaultCacheRoot());
+    const cache = new LegacyRoundCache(parsed.cache ?? defaultCacheRoot(import.meta.url));
     switch (sub) {
       case 'init':
         return this.printUsageResult(await cache.init(subArgs[0] ?? '', subArgs.slice(1)));

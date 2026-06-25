@@ -20,11 +20,6 @@ if (args[0] !== 'run') {
   console.error('expected run root command');
   process.exit(2);
 }
-const cacheIndex = args.indexOf('--cache');
-if (cacheIndex === -1 || !args[cacheIndex + 1]) {
-  console.error('missing --cache');
-  process.exit(2);
-}
 process.exit(0);
 EOF
 chmod +x "$FUGUE_ENGINE_CLI"
@@ -32,10 +27,10 @@ chmod +x "$FUGUE_ENGINE_CLI"
 echo "fuguectl-run tests"
 
 bash "$R" set --task "$TMP/TASK.md" --round 2 >/dev/null
-ok "run shim injects cache root" 'grep -q "^run --cache $FUGUE_CACHE set --task $TMP/TASK.md --round 2$" "$FUGUE_RUN_CALLS"'
+ok "run shim forwards set" 'grep -q "^run set --task $TMP/TASK.md --round 2$" "$FUGUE_RUN_CALLS"'
 
 bash "$R" status --human >/dev/null
-ok "run shim preserves status flags" 'grep -q "^run --cache $FUGUE_CACHE status --human$" "$FUGUE_RUN_CALLS"'
+ok "run shim preserves status flags" 'grep -q "^run status --human$" "$FUGUE_RUN_CALLS"'
 
 help="$(bash "$R" --help)"
 ok "help prints run commands" 'echo "$help" | grep -q "status \[--human\]"'

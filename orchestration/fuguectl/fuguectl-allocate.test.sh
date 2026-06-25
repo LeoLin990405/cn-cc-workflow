@@ -28,13 +28,6 @@ if (args[0] !== 'allocate') {
   console.error('expected allocate root command');
   process.exit(2);
 }
-for (const flag of ['--table', '--stats', '--ledger', '--kappa']) {
-  const index = args.indexOf(flag);
-  if (index === -1 || !args[index + 1]) {
-    console.error(`missing ${flag}`);
-    process.exit(2);
-  }
-}
 process.exit(0);
 EOF
 chmod +x "$FUGUE_ENGINE_CLI"
@@ -42,10 +35,10 @@ chmod +x "$FUGUE_ENGINE_CLI"
 echo "fuguectl-allocate tests"
 
 bash "$A" code --top >/dev/null
-ok "allocate shim injects table/stats/ledger/kappa" 'grep -q "^allocate --table $FUGUE_ALLOCATION --stats $FUGUE_ALLOCATION_STATS --ledger $FUGUE_ALLOCATION_LEDGER --kappa 7 code --top$" "$FUGUE_ALLOCATE_CALLS"'
+ok "allocate shim forwards rank" 'grep -q "^allocate code --top$" "$FUGUE_ALLOCATE_CALLS"'
 
 bash "$A" feed --from-ledger --result ok --fail cc-zeta >/dev/null
-ok "allocate shim preserves feed flags" 'grep -q "^allocate --table $FUGUE_ALLOCATION --stats $FUGUE_ALLOCATION_STATS --ledger $FUGUE_ALLOCATION_LEDGER --kappa 7 feed --from-ledger --result ok --fail cc-zeta$" "$FUGUE_ALLOCATE_CALLS"'
+ok "allocate shim preserves feed flags" 'grep -q "^allocate feed --from-ledger --result ok --fail cc-zeta$" "$FUGUE_ALLOCATE_CALLS"'
 
 help="$(bash "$A" --help)"
 ok "help prints allocate commands" 'case "$help" in *"record <task-type>"*) true;; *) false;; esac'

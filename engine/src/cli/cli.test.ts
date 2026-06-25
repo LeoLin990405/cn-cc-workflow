@@ -415,6 +415,7 @@ describe('fugue CLI', () => {
     });
 
     afterEach(async () => {
+      delete process.env.FUGUE_CACHE;
       await rm(dir, { recursive: true, force: true });
     });
 
@@ -743,6 +744,17 @@ describe('fugue CLI', () => {
       expect(barrier.out).toContain('all returned');
     });
 
+    it('uses FUGUE_CACHE when --cache is omitted', async () => {
+      process.env.FUGUE_CACHE = cache;
+
+      const init = await run(['cache', 'init', '9', 'x:cc-mimo']);
+
+      expect(init.code).toBe(0);
+      expect(await readFile(join(cache, 'round-9', 'manifest.tsv'), 'utf8')).toContain(
+        'x\tcc-mimo',
+      );
+    });
+
     it('prints non-zero usage errors for bad invocations', async () => {
       const missingRound = await run(args('status'));
       const missingFile = await run(args('init', '3', 'x:cc-mimo')).then(() =>
@@ -784,6 +796,10 @@ describe('fugue CLI', () => {
 
     afterEach(async () => {
       delete process.env.FUGUE_ALLOCATE_SEED;
+      delete process.env.FUGUE_ALLOCATION;
+      delete process.env.FUGUE_ALLOCATION_STATS;
+      delete process.env.FUGUE_ALLOCATION_LEDGER;
+      delete process.env.FUGUE_ALLOCATE_KAPPA;
       await rm(dir, { recursive: true, force: true });
     });
 
@@ -815,6 +831,28 @@ describe('fugue CLI', () => {
       expect(fallback.out.trim()).toBe('mimo');
       expect(fallback.err).toContain('falling back to fallback');
       expect(noArgs.code).toBe(2);
+    });
+
+    it('uses env-backed paths when explicit allocation options are omitted', async () => {
+      process.env.FUGUE_ALLOCATION = table;
+      process.env.FUGUE_ALLOCATION_STATS = stats;
+      process.env.FUGUE_ALLOCATION_LEDGER = ledger;
+      process.env.FUGUE_ALLOCATE_KAPPA = '7';
+
+      const top = await run(['allocate', 'code', '--top']);
+      const recorded = await run(['allocate', 'record', 'code', 'cc-doubao', 'ok']);
+      await writeFile(ledger, 'sql\tcc-glm\n', 'utf8');
+      const fed = await run(['allocate', 'feed', '--from-ledger', '--result', 'ok']);
+      const statsContent = await readFile(stats, 'utf8');
+
+      expect(top.code).toBe(0);
+      expect(top.out.trim()).toBe('minimax');
+      expect(recorded.code).toBe(0);
+      expect(recorded.out).toContain('code/doubao');
+      expect(fed.code).toBe(0);
+      expect(fed.out).toContain('recorded 1');
+      expect(statsContent).toContain('code\tdoubao');
+      expect(statsContent).toContain('sql\tglm');
     });
 
     it('updates posterior evidence, normalizes records, and renders stats', async () => {
@@ -954,6 +992,7 @@ describe('fugue CLI', () => {
     });
 
     afterEach(async () => {
+      delete process.env.FUGUE_CACHE;
       await rm(dir, { recursive: true, force: true });
     });
 
@@ -1105,6 +1144,15 @@ describe('fugue CLI', () => {
       expect(askUser.code).toBe(11);
     });
 
+    it('uses FUGUE_CACHE when --cache is omitted', async () => {
+      process.env.FUGUE_CACHE = cache;
+
+      const init = await run(['loop', 'init', '--max', '2', '--best-sha', 'sha0']);
+
+      expect(init.code).toBe(0);
+      expect(await readFile(join(cache, 'loop', 'meta'), 'utf8')).toContain('best_sha=sha0');
+    });
+
     it('normalizes verdicts, validates inputs, and renders status', async () => {
       await run(args('init', '--max', '3'));
       await run(
@@ -1166,6 +1214,7 @@ describe('fugue CLI', () => {
     });
 
     afterEach(async () => {
+      delete process.env.FUGUE_CACHE;
       await rm(dir, { recursive: true, force: true });
     });
 
@@ -1253,6 +1302,16 @@ describe('fugue CLI', () => {
       expect(set.err).toContain('--round must be');
       expect(round.code).toBe(2);
       expect(round.err).toContain('usage: round');
+    });
+
+    it('uses FUGUE_CACHE when --cache is omitted', async () => {
+      process.env.FUGUE_CACHE = cache;
+      await writeFile(task, '# TASK-test\nStatus: IN_PROGRESS\n', 'utf8');
+
+      const set = await run(['run', 'set', '--task', task]);
+
+      expect(set.code).toBe(0);
+      expect(await readFile(join(cache, 'run.meta'), 'utf8')).toContain(`task=${task}`);
     });
   });
 

@@ -22,11 +22,6 @@ if (args[0] !== 'cache') {
   console.error('expected cache root command');
   process.exit(2);
 }
-const cacheIndex = args.indexOf('--cache');
-if (cacheIndex === -1 || !args[cacheIndex + 1]) {
-  console.error('missing --cache');
-  process.exit(2);
-}
 process.exit(0);
 EOF
 chmod +x "$FUGUE_ENGINE_CLI"
@@ -34,10 +29,10 @@ chmod +x "$FUGUE_ENGINE_CLI"
 echo "fuguectl-cache tests"
 
 bash "$CACHE" init 1 t1:cc-deepseek t2:cc-glm >/dev/null
-ok "cache shim injects cache root" 'grep -q "^cache --cache $FUGUE_CACHE init 1 t1:cc-deepseek t2:cc-glm$" "$FUGUE_CACHE_CALLS"'
+ok "cache shim forwards init" 'grep -q "^cache init 1 t1:cc-deepseek t2:cc-glm$" "$FUGUE_CACHE_CALLS"'
 
 bash "$CACHE" barrier 1 --require-success >/dev/null
-ok "cache shim preserves barrier flags" 'grep -q "^cache --cache $FUGUE_CACHE barrier 1 --require-success$" "$FUGUE_CACHE_CALLS"'
+ok "cache shim preserves barrier flags" 'grep -q "^cache barrier 1 --require-success$" "$FUGUE_CACHE_CALLS"'
 
 help="$(bash "$CACHE" --help)"
 ok "help prints cache commands" 'case "$help" in *"barrier <round>"*) true;; *) false;; esac'

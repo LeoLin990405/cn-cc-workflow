@@ -6,6 +6,7 @@ import { Command, Option } from 'clipanion';
 import type { LoopRound, LoopState, VerdictKind } from '../../domain/loop.js';
 import { decideLoop } from '../../domain/loop-decide.js';
 import { NodeFileSystem } from '../../infra/node-file-system.js';
+import { defaultCacheRoot } from '../default-paths.js';
 
 interface ParsedArgs {
   readonly ok: true;
@@ -37,9 +38,6 @@ interface RecordOptions {
 }
 
 type ParseResult = ParsedArgs | ParseError;
-
-const defaultCacheRoot = (): string =>
-  process.env.FUGUE_CACHE ?? joinPath(process.cwd(), '.fuguectl-cache');
 
 const parseArgs = (args: readonly string[]): ParseResult => {
   let cache: string | null = null;
@@ -268,7 +266,7 @@ export class LoopCommand extends Command {
       return 0;
     }
 
-    const store = new LegacyLoopStore(parsed.cache ?? defaultCacheRoot());
+    const store = new LegacyLoopStore(parsed.cache ?? defaultCacheRoot(import.meta.url));
     try {
       switch (sub) {
         case 'init':

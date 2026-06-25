@@ -21,11 +21,6 @@ if (args[0] !== 'loop') {
   console.error('expected loop root command');
   process.exit(2);
 }
-const cacheIndex = args.indexOf('--cache');
-if (cacheIndex === -1 || !args[cacheIndex + 1]) {
-  console.error('missing --cache');
-  process.exit(2);
-}
 process.exit(0);
 EOF
 chmod +x "$FUGUE_ENGINE_CLI"
@@ -33,13 +28,13 @@ chmod +x "$FUGUE_ENGINE_CLI"
 echo "fuguectl-loop tests"
 
 bash "$LOOP" init --max 3 --best-sha sha0 >/dev/null
-ok "loop shim injects cache root" 'grep -q "^loop --cache $FUGUE_CACHE init --max 3 --best-sha sha0$" "$FUGUE_LOOP_CALLS"'
+ok "loop shim forwards init" 'grep -q "^loop init --max 3 --best-sha sha0$" "$FUGUE_LOOP_CALLS"'
 
 bash "$LOOP" record 1 --gate pass --verdict NEEDSFIX --findings 2 --ask-user 1 >/dev/null
-ok "loop shim preserves record flags" 'grep -q "^loop --cache $FUGUE_CACHE record 1 --gate pass --verdict NEEDSFIX --findings 2 --ask-user 1$" "$FUGUE_LOOP_CALLS"'
+ok "loop shim preserves record flags" 'grep -q "^loop record 1 --gate pass --verdict NEEDSFIX --findings 2 --ask-user 1$" "$FUGUE_LOOP_CALLS"'
 
 bash "$LOOP" decide >/dev/null
-ok "loop shim forwards decide" 'grep -q "^loop --cache $FUGUE_CACHE decide$" "$FUGUE_LOOP_CALLS"'
+ok "loop shim forwards decide" 'grep -q "^loop decide$" "$FUGUE_LOOP_CALLS"'
 
 help="$(bash "$LOOP" --help)"
 ok "help prints loop commands" 'echo "$help" | grep -q "record <round>"'
