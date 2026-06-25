@@ -17,6 +17,12 @@ import type { Workspace } from '../../domain/workspace.js';
 import { systemClock } from '../../infra/clock.js';
 import type { FileSystem } from '../../infra/file-system.js';
 import { NodeFileSystem } from '../../infra/node-file-system.js';
+import {
+  defaultAllocationStats,
+  defaultAllocationTable,
+  defaultExperienceDir,
+  defaultWorkspacesDir,
+} from '../default-paths.js';
 
 const fs = (): NodeFileSystem => new NodeFileSystem();
 
@@ -97,12 +103,12 @@ const optionsFor = (
 });
 
 abstract class WorkspaceCommand extends Command {
-  dir = Option.String('--dir', { required: true });
+  dir = Option.String('--dir', defaultWorkspacesDir(import.meta.url));
 }
 
 abstract class WorkspaceCommandOptions extends WorkspaceCommand {
-  allocation = Option.String('--allocation', { required: true });
-  stats = Option.String('--stats', { required: true });
+  allocation = Option.String('--allocation', defaultAllocationTable(import.meta.url));
+  stats = Option.String('--stats', defaultAllocationStats());
 }
 
 export class WorkspaceListCommand extends WorkspaceCommand {
@@ -154,7 +160,7 @@ export class WorkspaceContextCommand extends WorkspaceCommandOptions {
 
   name = Option.String();
   task = Option.String('--task');
-  experience = Option.String('--experience', { required: true });
+  experience = Option.String('--experience', defaultExperienceDir());
 
   override async execute(): Promise<number> {
     const fileSystem = fs();

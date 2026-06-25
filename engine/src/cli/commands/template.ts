@@ -4,6 +4,7 @@ import { Command, Option, UsageError } from 'clipanion';
 
 import { renderTemplate } from '../../domain/prompt-render.js';
 import { NodeFileSystem } from '../../infra/node-file-system.js';
+import { defaultTemplatesDir } from '../default-paths.js';
 
 const parseSet = (raw: string): readonly [string, string] => {
   const eq = raw.indexOf('=');
@@ -25,7 +26,7 @@ export class TemplateRenderCommand extends Command {
   static override paths = [['template']];
 
   name = Option.String();
-  dir = Option.String('--dir', { required: true });
+  dir = Option.String('--dir', defaultTemplatesDir(import.meta.url));
   sets = Option.Array('--set', []);
 
   override async execute(): Promise<number> {

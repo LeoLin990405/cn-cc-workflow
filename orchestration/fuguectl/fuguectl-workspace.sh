@@ -10,18 +10,10 @@
 set -uo pipefail
 # shellcheck source=/dev/null
 . "$(dirname "${BASH_SOURCE[0]}")/fuguectl-lib.sh"
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WSDIR="${FUGUE_WORKSPACES:-$HERE/workspaces}"
-ALLOC="${FUGUE_ALLOCATION:-$HERE/allocation.tsv}"
-STATS="${FUGUE_ALLOCATION_STATS:-${FUGUE_STATE:-$HOME/.config/fugue}/allocation-stats.tsv}"
-EXPERIENCE="${FUGUE_EXPERIENCE:-${FUGUE_STATE:-$HOME/.config/fugue}/experience}"
 
 sub="${1:-}"; shift || true
 case "$sub" in
-  list)    fx_run_engine workspace list --dir "$WSDIR" "$@";;
-  show)    fx_run_engine workspace show --dir "$WSDIR" "$@";;
-  model)   fx_run_engine workspace model --dir "$WSDIR" --allocation "$ALLOC" --stats "$STATS" "$@";;
-  context) fx_run_engine workspace context --dir "$WSDIR" --allocation "$ALLOC" --stats "$STATS" --experience "$EXPERIENCE" "$@";;
+  list|show|model|context) fx_run_engine workspace "$sub" "$@";;
   ''|-h|--help) sed -n '2,12p' "$0";;
   *) die "unknown subcommand '$sub' (list|show|model|context)";;
 esac

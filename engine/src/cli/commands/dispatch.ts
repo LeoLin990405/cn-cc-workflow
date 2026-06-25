@@ -26,22 +26,14 @@ import { systemClock } from '../../infra/clock.js';
 import type { FileSystem } from '../../infra/file-system.js';
 import { NodeCommandRunner } from '../../infra/node-command-runner.js';
 import { NodeFileSystem } from '../../infra/node-file-system.js';
-
-const stateDir = (): string =>
-  process.env.FUGUE_STATE ?? joinPath(joinPath(homedir(), '.config'), 'fugue');
-
-const fuguectlDir = (): string => joinPath(joinPath(process.cwd(), 'orchestration'), 'fuguectl');
-
-const defaultTemplatesDir = (): string => joinPath(fuguectlDir(), 'templates');
-const defaultWorkspacesDir = (): string => joinPath(fuguectlDir(), 'workspaces');
-const defaultAllocation = (): string =>
-  process.env.FUGUE_ALLOCATION ?? joinPath(fuguectlDir(), 'allocation.tsv');
-const defaultStats = (): string =>
-  process.env.FUGUE_ALLOCATION_STATS ?? joinPath(stateDir(), 'allocation-stats.tsv');
-const defaultExperience = (): string =>
-  process.env.FUGUE_EXPERIENCE ?? joinPath(stateDir(), 'experience');
-const defaultLedger = (): string =>
-  process.env.FUGUE_ALLOCATION_LEDGER ?? joinPath(stateDir(), 'alloc-ledger.tsv');
+import {
+  defaultAllocationLedger,
+  defaultAllocationStats,
+  defaultAllocationTable,
+  defaultExperienceDir,
+  defaultTemplatesDir,
+  defaultWorkspacesDir,
+} from '../default-paths.js';
 const defaultSkillsRoot = (): string =>
   process.env.FUGUE_SKILLS_ROOT ?? joinPath(joinPath(homedir(), '.claude'), 'skills');
 const defaultPluginsRoot = (): string =>
@@ -179,12 +171,12 @@ export class DispatchCommand extends Command {
   task = Option.String('--task');
   taskType = Option.String('--task-type');
   skills = Option.String('--skills');
-  templates = Option.String('--templates', defaultTemplatesDir());
-  workspaces = Option.String('--workspaces', defaultWorkspacesDir());
-  allocation = Option.String('--allocation', defaultAllocation());
-  stats = Option.String('--stats', defaultStats());
-  experience = Option.String('--experience', defaultExperience());
-  ledger = Option.String('--ledger', defaultLedger());
+  templates = Option.String('--templates', defaultTemplatesDir(import.meta.url));
+  workspaces = Option.String('--workspaces', defaultWorkspacesDir(import.meta.url));
+  allocation = Option.String('--allocation', defaultAllocationTable(import.meta.url));
+  stats = Option.String('--stats', defaultAllocationStats());
+  experience = Option.String('--experience', defaultExperienceDir());
+  ledger = Option.String('--ledger', defaultAllocationLedger());
 
   private readonly fs = new NodeFileSystem();
 

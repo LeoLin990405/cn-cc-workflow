@@ -8,24 +8,8 @@
 set -uo pipefail
 # shellcheck source=/dev/null
 . "$(dirname "${BASH_SOURCE[0]}")/fuguectl-lib.sh"
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TPLDIR="${FUGUE_TEMPLATES:-$HERE/templates}"
-WSDIR="${FUGUE_WORKSPACES:-$HERE/workspaces}"
-ALLOC="${FUGUE_ALLOCATION:-$HERE/allocation.tsv}"
-STATS="${FUGUE_ALLOCATION_STATS:-${FUGUE_STATE:-$HOME/.config/fugue}/allocation-stats.tsv}"
-EXPERIENCE="${FUGUE_EXPERIENCE:-${FUGUE_STATE:-$HOME/.config/fugue}/experience}"
-LEDGER="${FUGUE_ALLOCATION_LEDGER:-${FUGUE_STATE:-$HOME/.config/fugue}/alloc-ledger.tsv}"
 
 case "${1:-}" in
   -h|--help) sed -n '2,8p' "$0";;
-  *)
-    fx_run_engine dispatch \
-      --templates "$TPLDIR" \
-      --workspaces "$WSDIR" \
-      --allocation "$ALLOC" \
-      --stats "$STATS" \
-      --experience "$EXPERIENCE" \
-      --ledger "$LEDGER" \
-      "$@"
-    ;;
+  *) fx_run_engine dispatch "$@";;
 esac

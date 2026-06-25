@@ -6,9 +6,5 @@
 set -uo pipefail
 # shellcheck source=/dev/null
 . "$(dirname "${BASH_SOURCE[0]}")/fuguectl-lib.sh"
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TPLDIR="$HERE/templates"
 
-name="${1:-}"; shift || true
-[ -n "$name" ] || die "usage: <name> [--set KEY=VALUE ...]  (available: $(ls "$TPLDIR" 2>/dev/null | sed 's/\.md$//' | tr '\n' ' '))"
-fx_run_engine template "$name" --dir "$TPLDIR" "$@"
+fx_run_engine template "$@"

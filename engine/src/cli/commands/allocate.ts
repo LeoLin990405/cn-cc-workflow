@@ -1,5 +1,3 @@
-import { join as joinPath } from 'node:path';
-
 import { Command, Option } from 'clipanion';
 
 import {
@@ -14,7 +12,11 @@ import { applyOutcome, decayState, rankAgents } from '../../domain/allocation-sc
 import { NodeFileSystem } from '../../infra/node-file-system.js';
 import { seededRng } from '../../infra/seeded-rng.js';
 import { systemRng, type Rng } from '../../infra/rng.js';
-import { defaultStateDir, fuguectlDir } from '../default-paths.js';
+import {
+  defaultAllocationLedger,
+  defaultAllocationStats,
+  defaultAllocationTable,
+} from '../default-paths.js';
 
 interface ParsedArgs {
   readonly ok: true;
@@ -37,9 +39,9 @@ interface AllocationPaths {
 type ParseResult = ParsedArgs | ParseError;
 
 const defaultPaths = (): AllocationPaths => ({
-  table: process.env.FUGUE_ALLOCATION ?? joinPath(fuguectlDir(import.meta.url), 'allocation.tsv'),
-  stats: process.env.FUGUE_ALLOCATION_STATS ?? joinPath(defaultStateDir(), 'allocation-stats.tsv'),
-  ledger: process.env.FUGUE_ALLOCATION_LEDGER ?? joinPath(defaultStateDir(), 'alloc-ledger.tsv'),
+  table: defaultAllocationTable(import.meta.url),
+  stats: defaultAllocationStats(),
+  ledger: defaultAllocationLedger(),
 });
 
 const defaultParams = (): AllocationParams => ({

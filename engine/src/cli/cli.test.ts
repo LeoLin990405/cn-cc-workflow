@@ -164,6 +164,7 @@ describe('fugue CLI', () => {
       dir = await mkdtemp(join(tmpdir(), 'fugue-template-'));
     });
     afterEach(async () => {
+      delete process.env.FUGUE_TEMPLATES;
       await rm(dir, { recursive: true, force: true });
     });
 
@@ -174,6 +175,16 @@ describe('fugue CLI', () => {
       expect(code).toBe(0);
       expect(out).toContain('Role: backend');
       expect(out).toContain('Scope: {{SCOPE}}');
+    });
+
+    it('uses FUGUE_TEMPLATES when --dir is omitted', async () => {
+      process.env.FUGUE_TEMPLATES = dir;
+      await writeFile(join(dir, 'impl.md'), 'Role: {{ROLE}}\n', 'utf8');
+
+      const { code, out } = await run(['template', 'impl', '--set', 'ROLE=backend']);
+
+      expect(code).toBe(0);
+      expect(out).toContain('Role: backend');
     });
 
     it('rejects malformed --set values', async () => {
@@ -266,6 +277,12 @@ describe('fugue CLI', () => {
       delete process.env.FUGUE_OPENCODE;
       delete process.env.FUGUE_SKILLS_ROOT;
       delete process.env.FUGUE_PLUGINS_ROOT;
+      delete process.env.FUGUE_TEMPLATES;
+      delete process.env.FUGUE_WORKSPACES;
+      delete process.env.FUGUE_ALLOCATION;
+      delete process.env.FUGUE_ALLOCATION_STATS;
+      delete process.env.FUGUE_EXPERIENCE;
+      delete process.env.FUGUE_ALLOCATION_LEDGER;
       await rm(dir, { recursive: true, force: true });
     });
 
@@ -315,6 +332,39 @@ describe('fugue CLI', () => {
       expect(called).toContain('SCOPE-MARK');
       expect(taskLog).toContain('dispatch → cc-deepseek');
       expect(ledgerLog).toContain('code\tcc-deepseek');
+    });
+
+    it('uses env-backed default path options when dispatch paths are omitted', async () => {
+      process.env.FUGUE_TEMPLATES = templates;
+      process.env.FUGUE_WORKSPACES = workspaces;
+      process.env.FUGUE_ALLOCATION = allocation;
+      process.env.FUGUE_ALLOCATION_STATS = stats;
+      process.env.FUGUE_EXPERIENCE = experience;
+      process.env.FUGUE_ALLOCATION_LEDGER = ledger;
+
+      const dispatched = await run([
+        'dispatch',
+        'cc-env',
+        '--workspace',
+        'code',
+        '--template',
+        'impl',
+        '--set',
+        'ROLE=ENV-ROLE',
+        '--set',
+        'SCOPE=ENV-SCOPE',
+        '--task-type',
+        'code',
+      ]);
+      const called = await readFile(fugueCcCalled, 'utf8');
+      const ledgerLog = await readFile(ledger, 'utf8');
+
+      expect(dispatched.code).toBe(0);
+      expect(called).toContain('Code station prompt');
+      expect(called).toContain('minimax,doubao,glm');
+      expect(called).toContain('ENV-ROLE');
+      expect(called).toContain('ENV-SCOPE');
+      expect(ledgerLog).toContain('code\tcc-env');
     });
 
     it('dispatches prompt files through codex and opencode harnesses', async () => {
@@ -580,6 +630,7 @@ describe('fugue CLI', () => {
       store = join(dir, 'experience');
     });
     afterEach(async () => {
+      delete process.env.FUGUE_EXPERIENCE;
       await rm(dir, { recursive: true, force: true });
     });
 
@@ -598,6 +649,19 @@ describe('fugue CLI', () => {
       expect(recall.out).toContain('check cache before curl');
       expect(show.out).toContain('workspace: code');
       expect(show.out).toContain('title: cache first');
+    });
+
+    it('uses FUGUE_EXPERIENCE when --store is omitted', async () => {
+      process.env.FUGUE_EXPERIENCE = store;
+
+      const add = await run(['experience', 'add', 'code', 'env store'], {
+        stdin: Readable.from(['stored through env default']),
+      });
+      const recall = await run(['experience', 'recall', 'code']);
+
+      expect(add.code).toBe(0);
+      expect(add.out).toContain('env-store.md');
+      expect(recall.out).toContain('stored through env default');
     });
 
     it('adds from --from and rejects suspected secrets', async () => {
@@ -1620,6 +1684,10 @@ describe('fugue CLI', () => {
       );
     });
     afterEach(async () => {
+      delete process.env.FUGUE_WORKSPACES;
+      delete process.env.FUGUE_ALLOCATION;
+      delete process.env.FUGUE_ALLOCATION_STATS;
+      delete process.env.FUGUE_EXPERIENCE;
       await rm(dir, { recursive: true, force: true });
     });
 
@@ -1651,6 +1719,21 @@ describe('fugue CLI', () => {
       expect(context.out).toContain('[experience] Fast path');
       expect(context.out).toContain('do X');
       expect(context.out).toContain('> suggested model(bench): minimax,doubao,glm');
+    });
+
+    it('uses env-backed workspace defaults when path options are omitted', async () => {
+      process.env.FUGUE_WORKSPACES = workspaces;
+      process.env.FUGUE_ALLOCATION = allocation;
+      process.env.FUGUE_ALLOCATION_STATS = stats;
+      process.env.FUGUE_EXPERIENCE = experience;
+
+      const model = await run(['workspace', 'model', 'code']);
+      const context = await run(['workspace', 'context', 'code']);
+
+      expect(model.code).toBe(0);
+      expect(model.out.trim()).toBe('minimax,doubao,glm');
+      expect(context.code).toBe(0);
+      expect(context.out).toContain('[experience] Fast path');
     });
   });
 

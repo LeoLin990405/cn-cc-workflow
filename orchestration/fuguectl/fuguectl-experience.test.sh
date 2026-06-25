@@ -27,7 +27,7 @@ printf '%s\n' \
   "const bodyOf = (text) => text.replace(/^---\\n[\\s\\S]*?\\n---\\n/u, '').replace(/\\n+$/u, '');" \
   "const parseExperienceArgs = () => {" \
   "  const storeIndex = args.indexOf('--store');" \
-  "  if (storeIndex === -1) die('missing --store');" \
+  "  if (storeIndex === -1) return { store: process.env.FUGUE_EXPERIENCE, rest: args.slice(2) };" \
   "  return { store: args[storeIndex + 1], rest: args.slice(2).filter((_, index) => index !== storeIndex - 2 && index !== storeIndex - 1) };" \
   "};" \
   "if (root === 'workspace' && cmd === 'context') {" \
@@ -135,6 +135,6 @@ ok "show prints record" 'o=$(bash "$E" show code defensive-copy-trick); grep -q 
 # integration: workspace context injects this ws's experience (FUGUE_EXPERIENCE already exported)
 ctx="$(bash "$HERE/fuguectl-workspace.sh" context code)"
 ok "workspace context injects experience" 'echo "$ctx" | grep -q "defensive copy"'
-ok "shell delegates to engine CLI" 'grep -q "^experience add --store .* code defensive-copy-trick$" "$FUGUE_EXPERIENCE_CALLS"'
+ok "shell delegates to engine CLI" 'grep -q "^experience add code defensive-copy-trick$" "$FUGUE_EXPERIENCE_CALLS"'
 
 tdone

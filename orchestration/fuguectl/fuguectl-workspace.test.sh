@@ -73,6 +73,6 @@ ok "context --task injects task" 'o=$(bash "$W" context code --task "doX"); [[ "
 
 bash "$W" context nope >/dev/null 2>&1; ok "unknown workspace → non-0" '[ "$?" -ne 0 ]'
 o=$(bash "$W" 2>&1); ok "no subcommand → shows help(incl list)" '[[ "$o" == *"list"* ]]'
-ok "shell delegates to engine CLI" 'grep -q "^workspace context --dir .* --allocation .* --stats .* --experience .* code --task doX$" "$FUGUE_WORKSPACE_CALLS"'
+ok "shell delegates to engine CLI" 'grep -q "^workspace context code --task doX$" "$FUGUE_WORKSPACE_CALLS"'
 
 tdone

@@ -6,6 +6,7 @@ T="$HERE/fuguectl-template.sh"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export FUGUE_ENGINE_CLI="$TMP/fugue-engine"
 export FUGUE_TEMPLATE_CALLS="$TMP/template-calls.txt"
+export FUGUE_TEMPLATES="$HERE/templates"
 # shellcheck source=/dev/null
 . "$HERE/fuguectl-testlib.sh"
 
@@ -22,7 +23,7 @@ printf '%s\n' \
   "  process.exit(9);" \
   "}" \
   "const die = (message) => { console.error(message); process.exit(1); };" \
-  "let dir = '';" \
+  "let dir = process.env.FUGUE_TEMPLATES || '';" \
   "const vars = {};" \
   "for (let i = 0; i < args.length; i += 1) {" \
   "  const arg = args[i];" \
@@ -65,6 +66,6 @@ ok "analysis template renders" 'bash "$T" analysis --set ROLE=reviewer | grep -q
 bash "$T" >/dev/null 2>&1; ok "no name → non-0" '[ "$?" -ne 0 ]'
 bash "$T" nope >/dev/null 2>&1; ok "unknown template → non-0" '[ "$?" -ne 0 ]'
 bash "$T" impl --set BADFORMAT >/dev/null 2>&1; ok "--set without = → non-0" '[ "$?" -ne 0 ]'
-ok "shell delegates to engine CLI" 'grep -q "^template impl --dir .* --set ROLE=backend --set SCOPE=write-parser --set FILES=src/p.py$" "$FUGUE_TEMPLATE_CALLS"'
+ok "shell delegates to engine CLI" 'grep -q "^template impl --set ROLE=backend --set SCOPE=write-parser --set FILES=src/p.py$" "$FUGUE_TEMPLATE_CALLS"'
 
 tdone

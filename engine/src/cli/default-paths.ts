@@ -38,8 +38,26 @@ export const repoRoot = (metaUrl: string): string => {
 export const fuguectlDir = (metaUrl: string): string =>
   joinPath(repoRoot(metaUrl), 'orchestration', 'fuguectl');
 
+export const defaultTemplatesDir = (metaUrl: string): string =>
+  process.env.FUGUE_TEMPLATES ?? joinPath(fuguectlDir(metaUrl), 'templates');
+
+export const defaultWorkspacesDir = (metaUrl: string): string =>
+  process.env.FUGUE_WORKSPACES ?? joinPath(fuguectlDir(metaUrl), 'workspaces');
+
 export const defaultCacheRoot = (metaUrl: string): string =>
   process.env.FUGUE_CACHE ?? joinPath(repoRoot(metaUrl), '.fuguectl-cache');
 
 export const defaultStateDir = (): string =>
   process.env.FUGUE_STATE ?? joinPath(homedir(), '.config', 'fugue');
+
+export const defaultAllocationTable = (metaUrl: string): string =>
+  process.env.FUGUE_ALLOCATION ?? joinPath(fuguectlDir(metaUrl), 'allocation.tsv');
+
+export const defaultAllocationStats = (): string =>
+  process.env.FUGUE_ALLOCATION_STATS ?? joinPath(defaultStateDir(), 'allocation-stats.tsv');
+
+export const defaultAllocationLedger = (): string =>
+  process.env.FUGUE_ALLOCATION_LEDGER ?? joinPath(defaultStateDir(), 'alloc-ledger.tsv');
+
+export const defaultExperienceDir = (): string =>
+  process.env.FUGUE_EXPERIENCE ?? joinPath(defaultStateDir(), 'experience');

@@ -6,6 +6,7 @@ import { FsExperienceStore } from '../../adapters/experience/fs-experience-store
 import { isOk } from '../../domain/result.js';
 import { systemClock } from '../../infra/clock.js';
 import { NodeFileSystem } from '../../infra/node-file-system.js';
+import { defaultExperienceDir } from '../default-paths.js';
 
 const fs = (): NodeFileSystem => new NodeFileSystem();
 
@@ -25,7 +26,7 @@ const parseLimit = (raw: string): number => {
 };
 
 abstract class ExperienceCommand extends Command {
-  store = Option.String('--store', { required: true });
+  store = Option.String('--store', defaultExperienceDir());
 
   protected experienceStore(): FsExperienceStore {
     return new FsExperienceStore(fs(), systemClock, this.store);
