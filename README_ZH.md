@@ -3,7 +3,7 @@
 [![CI](https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml/badge.svg)](https://github.com/BicaMindLabs/open-sakanafugu/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518.18-339933.svg)](package.json)
-[![Tests](https://img.shields.io/badge/tests-342%20passing-success.svg)](orchestration/fuguectl)
+[![Tests](https://img.shields.io/badge/tests-343%20passing-success.svg)](orchestration/fuguectl)
 
 **[English](README.md) | 简体中文**
 
@@ -143,6 +143,7 @@ fugue version
 fugue doctor
 fugue task new|log|done
 fugue template <name> --dir <templates> [--set KEY=VALUE ...]
+fugue workspace list|show|model|context
 fugue goal template|show|check
 fugue agent-registry template|validate|list|resolve
 fugue self-harness template|run

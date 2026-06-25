@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Writable } from 'node:stream';
@@ -162,6 +162,93 @@ describe('fugue CLI', () => {
 
       expect(code).not.toBe(0);
       expect(out).toContain('--set format should be KEY=VALUE');
+    });
+  });
+
+  describe('workspace commands', () => {
+    let dir: string;
+    let workspaces: string;
+    let allocation: string;
+    let stats: string;
+    let experience: string;
+
+    beforeEach(async () => {
+      dir = await mkdtemp(join(tmpdir(), 'fugue-workspace-'));
+      workspaces = join(dir, 'workspaces');
+      allocation = join(dir, 'allocation.tsv');
+      stats = join(dir, 'allocation-stats.tsv');
+      experience = join(dir, 'experience');
+      await mkdir(workspaces, { recursive: true });
+      await mkdir(join(experience, 'code'), { recursive: true });
+      await writeFile(
+        join(workspaces, 'code.workspace'),
+        [
+          'prompt: You are at the code station.',
+          'models: @bench:code',
+          'tools: read,edit,write,bash',
+          'skills:',
+          'memory: event,experience',
+          '',
+        ].join('\n'),
+        'utf8',
+      );
+      await writeFile(
+        join(workspaces, 'review.workspace'),
+        'prompt: review\nmodels: coder\n',
+        'utf8',
+      );
+      await writeFile(join(workspaces, '_system.md'), 'Do not call Gemini.\n', 'utf8');
+      await writeFile(
+        allocation,
+        'code\tminimax,doubao,glm\nreview\tcoder\nfallback\tmimo\n',
+        'utf8',
+      );
+      await writeFile(stats, '', 'utf8');
+      await writeFile(
+        join(experience, 'code', 'fast-path.md'),
+        [
+          '---',
+          'workspace: code',
+          'title: Fast path',
+          'created: 2',
+          '---',
+          'Reuse this method.',
+        ].join('\n'),
+        'utf8',
+      );
+    });
+    afterEach(async () => {
+      await rm(dir, { recursive: true, force: true });
+    });
+
+    const wsArgs = (): readonly string[] => ['--dir', workspaces];
+    const modelArgs = (): readonly string[] => ['--allocation', allocation, '--stats', stats];
+
+    it('lists, shows, resolves models, and renders layered context', async () => {
+      const list = await run(['workspace', 'list', ...wsArgs()]);
+      const show = await run(['workspace', 'show', ...wsArgs(), 'code']);
+      const model = await run(['workspace', 'model', ...wsArgs(), ...modelArgs(), 'code']);
+      const context = await run([
+        'workspace',
+        'context',
+        ...wsArgs(),
+        ...modelArgs(),
+        '--experience',
+        experience,
+        'code',
+        '--task',
+        'do X',
+      ]);
+
+      expect(list.code).toBe(0);
+      expect(list.out).toContain('code');
+      expect(show.out).toContain('models: @bench:code');
+      expect(model.out.trim()).toBe('minimax,doubao,glm');
+      expect(context.code).toBe(0);
+      expect(context.out).toContain('Do not call Gemini.');
+      expect(context.out).toContain('[experience] Fast path');
+      expect(context.out).toContain('do X');
+      expect(context.out).toContain('> suggested model(bench): minimax,doubao,glm');
     });
   });
 

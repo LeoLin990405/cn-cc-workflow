@@ -3,8 +3,69 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 W="$HERE/fuguectl-workspace.sh"
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+export FUGUE_ENGINE_CLI="$TMP/fugue-engine"
+export FUGUE_WORKSPACE_CALLS="$TMP/workspace-calls.txt"
 # shellcheck source=/dev/null
 . "$HERE/fuguectl-testlib.sh"
+
+cat > "$FUGUE_ENGINE_CLI" <<'EOF'
+const fs = require('node:fs');
+
+fs.appendFileSync(process.env.FUGUE_WORKSPACE_CALLS, `${process.argv.slice(2).join(' ')}\n`);
+
+const [root, cmd, ...args] = process.argv.slice(2);
+if (root !== 'workspace') {
+  console.error('expected workspace');
+  process.exit(9);
+}
+
+let name = '';
+for (let i = 0; i < args.length; i += 1) {
+  const arg = args[i];
+  if (['--dir', '--allocation', '--stats', '--experience', '--task'].includes(arg)) {
+    i += 1;
+  } else if (!arg.startsWith('--')) {
+    name = arg;
+    break;
+  }
+}
+
+if (cmd === 'list') {
+  process.stdout.write('  code       You are at the code station.\n  review     Review only correctness.\n  main       Plan and route.\n  sql        SQL station.\n  web        Web station.\n  chinese    Chinese docs.\n');
+} else if (cmd === 'show' && name === 'code') {
+  process.stdout.write('prompt: code\nmodels: @bench:code\ntools: read,edit,write,bash\n');
+} else if (cmd === 'model' && name === 'code') {
+  process.stdout.write('minimax,doubao,glm\n');
+} else if (cmd === 'model' && name === 'review') {
+  process.stdout.write('coder\n');
+} else if (cmd === 'context' && name === 'code') {
+  const taskIndex = args.indexOf('--task');
+  const task = taskIndex === -1 ? '' : args[taskIndex + 1] ?? '';
+  process.stdout.write(`## Context — workspace: code
+
+### System Prompt
+Do not call Gemini.
+
+### Workspace Prompt
+code station
+
+### Tools
+read edit write bash  (only this station enabled, the rest not exposed)
+
+### Memory
+scope: event,experience  (only memory relevant to this scope, not the full archive)
+
+### History
+last few conversation rounds + key execution trace (not the full transcript)
+
+${task.length > 0 ? `### Task\n${task}\n\n` : ''}> suggested model(bench): minimax,doubao,glm
+`);
+} else {
+  console.error(`no workspace '${name ?? ''}'`);
+  process.exit(1);
+}
+EOF
 
 echo "fuguectl-workspace tests"
 
@@ -30,5 +91,6 @@ ok "context --task injects task" 'o=$(bash "$W" context code --task "doX"); [[ "
 
 bash "$W" context nope >/dev/null 2>&1; ok "unknown workspace → non-0" '[ "$?" -ne 0 ]'
 o=$(bash "$W" 2>&1); ok "no subcommand → shows help(incl list)" '[[ "$o" == *"list"* ]]'
+ok "shell delegates to engine CLI" 'grep -q "^workspace context --dir .* --allocation .* --stats .* --experience .* code --task doX$" "$FUGUE_WORKSPACE_CALLS"'
 
 tdone

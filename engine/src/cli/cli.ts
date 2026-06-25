@@ -13,6 +13,12 @@ import { SelfHarnessRunCommand, SelfHarnessTemplateCommand } from './commands/se
 import { TaskDoneCommand, TaskLogCommand, TaskNewCommand } from './commands/task.js';
 import { TemplateRenderCommand } from './commands/template.js';
 import { VersionCommand } from './commands/version.js';
+import {
+  WorkspaceContextCommand,
+  WorkspaceListCommand,
+  WorkspaceModelCommand,
+  WorkspaceShowCommand,
+} from './commands/workspace.js';
 
 /**
  * Build the fugue CLI with every command registered. Pure construction (no IO,
@@ -35,6 +41,10 @@ export const buildCli = (): Cli => {
   cli.register(GoalShowCommand);
   cli.register(GoalCheckCommand);
   cli.register(TemplateRenderCommand);
+  cli.register(WorkspaceListCommand);
+  cli.register(WorkspaceShowCommand);
+  cli.register(WorkspaceModelCommand);
+  cli.register(WorkspaceContextCommand);
   cli.register(AgentRegistryTemplateCommand);
   cli.register(AgentRegistryValidateCommand);
   cli.register(AgentRegistryListCommand);
