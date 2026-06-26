@@ -122,7 +122,7 @@ Fugu、OpenFugu 和 FuguNano 在同一条路线上：当单一前沿模型或硬
 变窄、难治理时，系统能力开始来自“协调层”。区别在于这个协调层放在哪里。
 
 <p align="center">
-  <img src="docs/readme-fugu-comparison.svg" alt="Fugu、OpenFugu 与 FuguNano 对比" width="920">
+  <img src="docs/readme-fugu-comparison-zh.svg" alt="Fugu、OpenFugu 与 FuguNano 对比" width="920">
 </p>
 
 | 系统        | 协调层放在哪里       | 打开的能力                                          | 使用形态                                      |
