@@ -1,12 +1,12 @@
 ---
 name: cn-result-handling
-description: Rules for presenting Chinese model backend output back to the user
+description: Rules for presenting provider-backed model output back to the user
 user-invocable: false
 ---
 
 # CN Result Handling
 
-When the companion script returns output from a Chinese model backend:
+When the companion script returns output from a provider-backed model profile:
 
 - Return the model's stdout **verbatim**. Do not paraphrase or summarize.
 - If the model produced code, preserve it exactly including comments and formatting.

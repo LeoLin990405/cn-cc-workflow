@@ -1,5 +1,5 @@
 ---
-description: Check availability of all Chinese model backends
+description: Check availability of all provider-backed model profiles
 argument-hint: '[--json] [--doctor]'
 allowed-tools: Bash(node:*)
 ---

@@ -1,5 +1,5 @@
 ---
-description: Intelligently route a task to the best Chinese model backend
+description: Intelligently route a task to the best provider-backed model profile
 argument-hint: '<task description>'
 context: fork
 allowed-tools: Bash(node:*)

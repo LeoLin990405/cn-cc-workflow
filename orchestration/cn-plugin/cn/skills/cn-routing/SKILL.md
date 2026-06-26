@@ -1,10 +1,10 @@
 ---
 name: cn-routing
-description: Decision matrix for selecting Chinese model backends based on task characteristics
+description: Decision matrix for selecting provider-backed model profiles based on task characteristics
 user-invocable: false
 ---
 
-# Chinese Model Routing
+# Provider Profile Routing
 
 Use this skill inside the `cn:cn-dispatch` agent to pick the right model.
 
@@ -16,9 +16,9 @@ Use this skill inside the `cn:cn-dispatch` agent to pick the right model.
 | 2 | very long text, >200K tokens, multimodal, image+text material, cross-codebase analysis | **mimo** | 1M token-plan Pro plus V2.5/Omni profiles |
 | 3 | long text, 50K–200K, papers, contracts, document review | **kimi** | Stable Kimi Code long-context route |
 | 4 | math, proofs, logical reasoning, equations, optimization, algorithm derivation | **stepfun** | Math/logic specialist |
-| 5 | deep reasoning, Chinese comprehension, semantic analysis, knowledge Q&A | **glm** | Strong Chinese reasoning |
+| 5 | deep reasoning, Chinese-language comprehension, semantic analysis, knowledge Q&A | **glm** | Strong Chinese-language reasoning |
 | 6 | fast answers, simple tasks, low latency, lightweight | **minimax** | Stable/highspeed M2 profiles |
-| 7 | general Chinese coding, code generation, frontend/visual coding, default | **doubao** | Best all-round Chinese coder |
+| 7 | general coding, Chinese-language tasks, code generation, frontend/visual coding, default | **doubao** | Strong all-round coding profile |
 
 ## Routing Rules
 

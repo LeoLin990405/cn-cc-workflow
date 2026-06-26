@@ -1,5 +1,5 @@
 ---
-description: Check status of Chinese model backends
+description: Check status of provider-backed model profiles
 argument-hint: '[--json]'
 allowed-tools: Bash(node:*)
 ---

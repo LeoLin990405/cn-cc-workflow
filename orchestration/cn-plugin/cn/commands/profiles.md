@@ -1,5 +1,5 @@
 ---
-description: List Chinese model profile knobs
+description: List provider-backed model profile knobs
 argument-hint: ''
 allowed-tools: Bash(node:*)
 ---

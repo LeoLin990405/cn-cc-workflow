@@ -57,13 +57,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/), versioning [SemV
 
 ## [1.0.0] - 2026-06-21
 
-First public release — the Chinese-model multi-agent coding workflow plus its full tooling and engineering layer.
+First public release — the provider-backed multi-agent coding workflow plus its full tooling and engineering layer.
 
 ### Added
 
 **Foundation**
 
-- `backends/` — Chinese-model backends: `cc_model_launch` shared core + 9 thin launchers + `cc-model-registry.tsv` + `cc-models` dispatcher + `cc-sync` (auto-follow Claude Code + model updates) + research-prompt + install/verify/prompts.
+- `backends/` — provider-backed model profiles: `cc_model_launch` shared core + thin launchers + `cc-model-registry.tsv` + `cc-models` dispatcher + `cc-sync` (auto-follow Claude Code + model updates) + research-prompt + install/verify/prompts.
 - `orchestration/fuguectl/SKILL.md` — 5-phase workflow + Phase 5 Review-Fix Loop v2 (deterministic gate first / keep-best / ≥2 confirmation passes / meta-reflect on non-convergence).
 - `orchestration/fugue-cc/provider.config.example` — sanitized multi-window fugue-cc topology template.
 - `orchestration/cn-plugin/cn/` — `/cn:*` commands + `cn-dispatch` (derived from openai/codex-plugin-cc).
