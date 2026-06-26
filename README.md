@@ -4,7 +4,7 @@
 
 # FuguNano
 
-### Model-agnostic multi-agent coding, no coordinator training required.
+### Open & light-weight version reimplementation of Sakana Fugu.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Runtime-Node%20%E2%89%A518.18-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js >= 18.18" />
@@ -30,8 +30,9 @@
 
 </div>
 
-> FuguNano turns a model fleet into a reliable coding loop: plan, dispatch, cache,
-> integrate, review, repair, and improve the harness itself.
+> A repo-native, multi-agent coding loop powered by 9+ LLMs (isolated via
+> Claude Code) and an independent Codex reviewer. Lightweight, bounded, and
+> self-improving (Self-Harness) - no coordinator training required.
 > It is intentionally provider-neutral: use the accessible models you trust
 > today, add more runtimes tomorrow, and keep the engineering loop the same.
 

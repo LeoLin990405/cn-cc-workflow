@@ -2,7 +2,7 @@
   "name": "@bicamindlabs/fugunano-engine",
   "version": "0.0.0",
   "private": true,
-  "description": "FuguNano — typed multi-agent orchestration engine (ports & adapters). Training-free, self-hostable analogue of a learned coordinator.",
+  "description": "FuguNano typed engine for a repo-native multi-agent coding loop: 9+ LLMs, independent Codex review, bounded Self-Harness, no coordinator training.",
   "license": "Apache-2.0",
   "author": "BicaMind Labs",
   "type": "module",

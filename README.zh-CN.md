@@ -4,7 +4,7 @@
 
 # FuguNano
 
-### 免训练、模型中立的多 agent 编码编排，把可用模型变成可治理 loop。
+### Sakana Fugu 的开放轻量重实现。
 
 <p align="center">
   <img src="https://img.shields.io/badge/Runtime-Node%20%E2%89%A518.18-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js >= 18.18" />
@@ -30,7 +30,9 @@
 
 </div>
 
-> FuguNano 负责规划、派发、缓存、整合、审查、修复，并让 harness 自己从失败中改进。
+> FuguNano 是 repo-native 的多 agent 编码 loop：由 9+ LLMs 驱动，
+> 通过 Claude Code 隔离运行，并由独立 Codex reviewer 审查。
+> 它轻量、有界、可自改进（Self-Harness），不需要训练 coordinator。
 > 它不绑定某一类模型或某一个地区的供应商：今天接入你能稳定使用、信任的模型，
 > 明天社区可以继续补新的 runtime，而工程闭环保持不变。
 

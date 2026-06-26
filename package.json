@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "FuguNano multi-runtime agent coding workflow: fuguectl + typed engine + bounded review-fix loop",
+  "description": "Open light-weight Sakana Fugu reimplementation: a repo-native multi-agent coding loop powered by 9+ LLMs, isolated via Claude Code, reviewed by Codex, bounded and self-improving.",
   "license": "Apache-2.0",
   "author": "BicaMind Labs",
   "homepage": "https://github.com/BicaMindLabs/FuguNano",
