@@ -171,4 +171,37 @@ describe('OpencodeHarness', () => {
     });
     expect(runner.calls[0]?.options?.timeoutMs).toBe(789);
   });
+
+  it('treats OpenCode zero-exit stderr errors as unavailable', async () => {
+    const runner = new FakeRunner(
+      res({
+        code: 0,
+        stdout: '',
+        stderr: 'ProviderModelNotFoundError: Model not found: kimi/latest',
+      }),
+    );
+    const result = await new OpencodeHarness(runner).dispatch({
+      agent: 'kimi/latest',
+      prompt: 'go',
+    });
+
+    expect(isErr(result) && result.error.kind).toBe('unavailable');
+    expect(isErr(result) && result.error.detail).toContain('Model not found');
+  });
+
+  it('allows OpenCode stderr logs when stdout contains the assistant output', async () => {
+    const runner = new FakeRunner(
+      res({
+        code: 0,
+        stdout: 'OPENCODE_OK\n',
+        stderr: 'Error: noisy plugin warning',
+      }),
+    );
+    const result = await new OpencodeHarness(runner).dispatch({
+      agent: 'kimi-for-coding',
+      prompt: 'go',
+    });
+
+    expect(isOk(result) && result.value.output).toBe('OPENCODE_OK\n');
+  });
 });

@@ -269,6 +269,7 @@ describe('fugue CLI', () => {
     let ledger: string;
     let promptFile: string;
     let codexBin: string;
+    let opencodeBin: string;
     let fugueCcCalled: string;
     let codexCalled: string;
     let opencodeCalled: string;
@@ -308,6 +309,7 @@ describe('fugue CLI', () => {
       const codex = join(dir, 'codex');
       const opencode = join(dir, 'opencode');
       codexBin = codex;
+      opencodeBin = opencode;
       await writeFile(
         fugueCc,
         [
@@ -520,6 +522,27 @@ describe('fugue CLI', () => {
       expect(dispatched.code).toBe(0);
       expect(codexCall).toContain('ARGV: exec --model gpt-5.5');
       expect(codexCall).toContain('inline smoke prompt');
+    });
+
+    it('surfaces OpenCode zero-exit stderr errors as dispatch failures', async () => {
+      await writeFile(
+        opencodeBin,
+        [
+          '#!/usr/bin/env bash',
+          `echo "ARGV: $*" > "${opencodeCalled}"`,
+          'printf "ProviderModelNotFoundError: Model not found: kimi/latest\\n" >&2',
+          '',
+        ].join('\n'),
+        'utf8',
+      );
+      await chmod(opencodeBin, 0o755);
+
+      const dispatched = await run(
+        args('kimi/latest', '--harness', 'opencode', '--prompt', 'review this change'),
+      );
+
+      expect(dispatched.code).toBe(1);
+      expect(dispatched.err).toContain('ProviderModelNotFoundError');
     });
 
     it('writes successful dispatch output to a durable artifact', async () => {

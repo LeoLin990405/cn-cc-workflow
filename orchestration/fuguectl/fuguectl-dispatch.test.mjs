@@ -165,6 +165,23 @@ suite.ok("opencode harness → opencode run -m <provider/model>", () =>
     "ARGV: run -m doubao/doubao-code",
   ),
 );
+writeExecutable(join(tmp, "opencode"), [
+  "#!/usr/bin/env node",
+  "const fs = require('node:fs');",
+  `fs.writeFileSync(${JSON.stringify(opencodeCalled)}, 'ARGV: ' + process.argv.slice(2).join(' ') + '\\n');`,
+  "process.stderr.write('ProviderModelNotFoundError: Model not found: kimi/latest\\n');",
+]);
+suite.ok(
+  "opencode zero-exit stderr errors are failures",
+  () =>
+    run(dispatch, [
+      "kimi/latest",
+      "--harness",
+      "opencode",
+      "--prompt-file",
+      promptFile,
+    ]).status !== 0,
+);
 
 const skillsRoot = join(tmp, "skills");
 const injectedSkill = join(skillsRoot, "inj-tool");

@@ -213,7 +213,7 @@ export const renderAgentRegistryTemplate = (): string =>
         {
           id: 'opencode-kimi',
           harness: 'opencode',
-          target: 'kimi/latest',
+          target: 'kimi-for-coding/k2p5',
           modelFamily: 'kimi',
           roles: ['implementer'],
           canEditFiles: true,

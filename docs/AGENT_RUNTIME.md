@@ -29,7 +29,7 @@ dispatch time.
     {
       "id": "opencode-kimi",
       "harness": "opencode",
-      "target": "kimi/latest",
+      "target": "kimi-for-coding/k2p5",
       "modelFamily": "kimi",
       "roles": ["implementer"],
       "canEditFiles": true
@@ -92,6 +92,11 @@ for typed routing and coordinator behavior. The `agents`, `task`, `template`,
 This keeps existing `fuguectl dispatch cc-deepseek --harness fugue-cc` workflows
 working, while allowing a single engine round to mix `fugue-cc` implementers,
 Codex reviewers, and OpenCode providers.
+
+OpenCode currently can print provider/model errors to stderr while still
+exiting 0. The OpenCode adapter treats an empty-stdout, error-looking stderr as
+`unavailable`, so `fuguectl dispatch --harness opencode` fails visibly instead
+of caching an empty "successful" artifact.
 
 ## Policy
 

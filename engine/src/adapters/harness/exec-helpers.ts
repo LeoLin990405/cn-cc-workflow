@@ -6,7 +6,7 @@ import type {
 } from '../../domain/dispatch.js';
 import { err, ok } from '../../domain/result.js';
 import type { Result } from '../../domain/result.js';
-import type { CommandOptions, CommandRunner } from '../../infra/command-runner.js';
+import type { CommandOptions, CommandResult, CommandRunner } from '../../infra/command-runner.js';
 
 /** Shared dispatch/health mapping for the blocking-CLI harnesses (fugue-cc/codex/opencode). */
 export interface HarnessExecOptions {
@@ -24,16 +24,29 @@ export interface HarnessExecOptions {
 const message = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+export interface DispatchMappingOptions {
+  readonly zeroExitError?: (result: CommandResult) => string | undefined;
+}
+
 export const runDispatch = async (
   runner: CommandRunner,
   bin: string,
   args: readonly string[],
   request: DispatchRequest,
   options: CommandOptions = {},
+  mapping: DispatchMappingOptions = {},
 ): Promise<Result<DispatchResult, DispatchError>> => {
   try {
     const result = await runner.run(bin, args, options);
     if (result.code === 0) {
+      const falseZeroDetail = mapping.zeroExitError?.(result);
+      if (falseZeroDetail !== undefined) {
+        return err({
+          agent: request.agent,
+          kind: 'unavailable',
+          detail: falseZeroDetail,
+        });
+      }
       return ok({ agent: request.agent, output: result.stdout, exitCode: 0 });
     }
     return err({
