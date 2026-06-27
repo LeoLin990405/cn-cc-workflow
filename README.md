@@ -98,7 +98,7 @@ fugue-cc
 Then run the operator from another shell:
 
 ```bash
-/path/to/fugunano/orchestration/fuguectl/fuguectl preflight
+/path/to/fugunano/orchestration/fuguectl/fuguectl preflight --harness fugue-cc
 /path/to/fugunano/orchestration/fuguectl/fuguectl fleet status
 ```
 
@@ -120,7 +120,8 @@ the same agent profiles. Smoke-test the installed bundle:
 ## How The Loop Works
 
 ```bash
-fuguectl preflight
+fuguectl preflight --harness codex        # lite reviewer path
+fuguectl preflight --harness fugue-cc     # full worktree fleet path
 fuguectl task new "implement feature"
 fuguectl dispatch cc-deepseek --template impl --task TASK.md --task-type backend
 fuguectl cache barrier <round>
@@ -168,7 +169,7 @@ improvement first, then decide whether a learned conductor is worth the cost.
 
 | Area                   | Commands                                                                                                                                                                                              |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Setup and recon        | `fuguectl doctor`, `fuguectl preflight`, `fuguectl fleet status\|up\|down`                                                                                                                            |
+| Setup and recon        | `fuguectl doctor`, `fuguectl preflight --harness fugue-cc\|codex\|opencode\|all`, `fuguectl fleet status\|up\|down`                                                                                  |
 | Planning               | `fuguectl task new\|log\|done`, `fuguectl template <name>`, `fuguectl plan "<goal>"`, `fuguectl goal template\|show\|check`                                                                           |
 | Routing and context    | `fuguectl allocate <type>`, `fuguectl workspace list\|show\|model\|context`, `fuguectl agents template\|validate\|list\|resolve`, `fuguectl skills index\|list\|match\|show\|inject\|validate\|forge` |
 | Dispatch and gather    | `fuguectl dispatch <target>`, `fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                                                              |
@@ -200,7 +201,7 @@ fugue allocate <task-type>|list|record|feed|stats|reset|decay
 fugue dispatch <target> --harness fugue-cc|codex|opencode --template <name>|--prompt-file <file>
 fugue integrate --work <repo> --agents "a b" [--ownership file] [--dry]
 fugue skills index|list|match|show|inject|validate|forge
-fugue preflight [--config-only] [provider.config]
+fugue preflight [--harness fugue-cc|codex|opencode|all] [--config-only] [provider.config]
 fugue cache init|put|fail|status|barrier|collect|list|resume --cache <dir>
 fugue plan "<goal>" --out <dir> [--models m1,m2]
 fugue task new|log|done

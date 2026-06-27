@@ -56,7 +56,8 @@ Three roles, five phases. Planner orchestrates, the implementer fleet writes cod
 1. **Preflight (go/no-go gate)** — deps / provider mounted / provider config sanity + the **legacy Gemini CLI guard**, all as code:
 
    ```bash
-   FUGUE_CC_WORK=<provider project> "$FO" preflight   # NO-GO → fix before dispatching (provider down → fleet up)
+   "$FO" preflight --harness codex                    # lite reviewer path
+   FUGUE_CC_WORK=<provider project> "$FO" preflight --harness fugue-cc   # full fleet path
    ```
 
    `"$FO" doctor` shows the full environment + recommendation. **Never dispatch when preflight is NO-GO** — that's how tasks get stuck in an empty queue.

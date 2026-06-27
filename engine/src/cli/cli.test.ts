@@ -1514,6 +1514,42 @@ describe('fugue CLI', () => {
       expect(ignored.out).toContain('gitignored');
     });
 
+    it('can preflight the codex harness without requiring fugue-cc', async () => {
+      const codex = join(dir, 'codex');
+      await writeFile(codex, '#!/usr/bin/env bash\nexit 0\n', 'utf8');
+      await chmod(codex, 0o755);
+
+      const result = await run(['preflight', '--harness', 'codex', '--codex-bin', codex]);
+
+      expect(result.code).toBe(0);
+      expect(result.out).toContain('harness=codex');
+      expect(result.out).toContain(codex);
+      expect(result.out).not.toContain('missing fugue-cc');
+      expect(result.out).not.toContain('FUGUE_CC_WORK unset');
+    });
+
+    it('requires the selected opencode harness binary', async () => {
+      const result = await run([
+        'preflight',
+        '--harness',
+        'opencode',
+        '--opencode-bin',
+        join(dir, 'missing-opencode'),
+      ]);
+
+      expect(result.code).toBe(1);
+      expect(result.out).toContain('harness=opencode');
+      expect(result.out).toContain('missing');
+      expect(result.out).toContain('missing-opencode');
+    });
+
+    it('rejects an unknown preflight harness', async () => {
+      const result = await run(['preflight', '--harness', 'gemini']);
+
+      expect(result.code).toBe(1);
+      expect(result.err).toContain("unknown --harness 'gemini'");
+    });
+
     it('uses env-backed bin and work defaults when CLI options are omitted', async () => {
       const work = join(dir, 'provider-work-env');
       const bin = join(dir, 'fugue-cc');

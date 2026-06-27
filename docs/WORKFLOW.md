@@ -36,7 +36,7 @@ The operator reads the task, splits it into parallelizable subtasks, and picks l
 
 ### Phase 2 — Parallel Implementation + Cache + join barrier (Implementers)
 
-After the selected runtimes pass preflight (`fuguectl doctor`, `fuguectl preflight`, and `fuguectl fleet status` when using the `fugue-cc` worktree fleet):
+After the selected runtimes pass preflight (`fuguectl doctor`, `fuguectl preflight --harness <name>`, and `fuguectl fleet status` when using the `fugue-cc` worktree fleet):
 
 1. **Open this round's cache**: `fuguectl cache init <round> t1:cc-deepseek t2:cc-glm t3:agy ...` — declare the N tasks dispatched this round (the parallel dispatch manifest).
 2. **Dispatch**: `fuguectl dispatch <agent> --harness fugue-cc|codex|opencode --prompt-file <prompt>` or use an engine `AgentRegistry` so the coordinator resolves the harness from the logical profile; each implementer edits in its own worktree or scoped runtime.

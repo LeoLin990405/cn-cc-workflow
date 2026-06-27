@@ -6,10 +6,13 @@ import { Command, Option } from 'clipanion';
 
 import { checkProviderConfig } from '../../domain/preflight-checks.js';
 import type { GateCheck } from '../../domain/gate.js';
+import type { HarnessName } from '../../domain/ports/harness.js';
 import { NodeCommandRunner } from '../../infra/node-command-runner.js';
 import { NodeFileSystem } from '../../infra/node-file-system.js';
 import type { CommandRunner } from '../../infra/command-runner.js';
 import { fuguectlScript } from '../default-paths.js';
+
+type PreflightHarness = HarnessName | 'all';
 
 interface MutableStatus {
   fail: boolean;
@@ -27,6 +30,20 @@ const fs = (): NodeFileSystem => new NodeFileSystem();
 const nonEmptyEnv = (value: string | undefined): string | undefined =>
   value !== undefined && value.length > 0 ? value : undefined;
 
+const PREFLIGHT_HARNESSES: readonly PreflightHarness[] = ['fugue-cc', 'codex', 'opencode', 'all'];
+
+const parseHarness = (value: string): PreflightHarness | null =>
+  PREFLIGHT_HARNESSES.includes(value as PreflightHarness) ? (value as PreflightHarness) : null;
+
+const includesFugueCc = (harness: PreflightHarness): boolean =>
+  harness === 'fugue-cc' || harness === 'all';
+
+const includesCodex = (harness: PreflightHarness): boolean =>
+  harness === 'codex' || harness === 'all';
+
+const includesOpencode = (harness: PreflightHarness): boolean =>
+  harness === 'opencode' || harness === 'all';
+
 const shellQuote = (value: string): string => `'${value.replace(/'/gu, "'\\''")}'`;
 
 const commandExists = async (runner: CommandRunner, command: string): Promise<boolean> => {
@@ -39,6 +56,9 @@ const commandExists = async (runner: CommandRunner, command: string): Promise<bo
     return false;
   }
 };
+
+const cliExists = async (runner: CommandRunner, command: string): Promise<boolean> =>
+  command.includes('/') ? executable(command) : commandExists(runner, command);
 
 const executable = async (path: string): Promise<boolean> => {
   try {
@@ -150,22 +170,34 @@ export class PreflightCommand extends Command {
   config = Option.String({ required: false });
   configOnly = Option.Boolean('--config-only', false);
   probe = Option.Boolean('--probe', false);
+  harness = Option.String('--harness', process.env.FUGUE_PREFLIGHT_HARNESS ?? 'fugue-cc');
   work = Option.String('--work');
   bin = Option.String('--bin', process.env.FUGUE_CC_BIN ?? 'fugue-cc');
+  codexBin = Option.String('--codex-bin', process.env.FUGUE_CODEX ?? 'codex');
+  opencodeBin = Option.String('--opencode-bin', process.env.FUGUE_OPENCODE ?? 'opencode');
   cacheScript = Option.String('--cache-script', fuguectlScript(import.meta.url, 'cache'));
 
   override async execute(): Promise<number> {
+    const harness = parseHarness(this.harness);
+    if (harness === null) {
+      this.context.stderr.write(
+        `unknown --harness '${this.harness}' (fugue-cc|codex|opencode|all)\n`,
+      );
+      return 1;
+    }
+
     const runner = new NodeCommandRunner();
     const fileSystem = fs();
     const status: MutableStatus = { fail: false, warn: false };
-    const lines = ['── parallel dispatch preflight ──'];
+    const lines = [`── parallel dispatch preflight (harness=${harness}) ──`];
     const work = this.work ?? nonEmptyEnv(process.env.FUGUE_CC_WORK);
+    const checkProvider = this.configOnly || this.config !== undefined || includesFugueCc(harness);
 
-    if (!this.configOnly) await this.runDependencyChecks(lines, status, runner, work);
+    if (!this.configOnly) await this.runDependencyChecks(lines, status, runner, work, harness);
 
     const configPath =
       this.config ?? (work !== undefined ? joinPath(work, '.fugue-cc/provider.config') : undefined);
-    if (configPath !== undefined) {
+    if (checkProvider && configPath !== undefined) {
       const configText = await fileSystem.read(configPath);
       if (configText !== null) {
         for (const check of checkProviderConfig(configText).checks) {
@@ -179,7 +211,7 @@ export class PreflightCommand extends Command {
           'provider config not located — skip config checks (pass a path or set FUGUE_CC_WORK)',
         );
       }
-    } else {
+    } else if (checkProvider) {
       warn(
         lines,
         status,
@@ -187,7 +219,9 @@ export class PreflightCommand extends Command {
       );
     }
 
-    await this.runGitignoreCheck(lines, status, runner, work);
+    if (includesFugueCc(harness) || this.configOnly) {
+      await this.runGitignoreCheck(lines, status, runner, work);
+    }
 
     lines.push(
       '',
@@ -204,24 +238,39 @@ export class PreflightCommand extends Command {
     status: MutableStatus,
     runner: CommandRunner,
     work: string | undefined,
+    harness: PreflightHarness,
   ): Promise<void> {
-    if (await commandExists(runner, this.bin)) ok(lines, this.bin);
-    else fail(lines, status, `missing ${this.bin}`);
+    if (includesFugueCc(harness)) {
+      if (await cliExists(runner, this.bin)) ok(lines, this.bin);
+      else fail(lines, status, `missing ${this.bin}`);
+    }
 
     if (await commandExists(runner, 'git')) ok(lines, 'git');
     else fail(lines, status, 'missing git');
 
-    if (await commandExists(runner, 'codex')) ok(lines, 'codex (reviewer)');
-    else {
-      warn(
-        lines,
-        status,
-        'no codex — review should fall back to another independent configured reviewer',
-      );
+    if (includesCodex(harness)) {
+      if (await cliExists(runner, this.codexBin)) ok(lines, this.codexBin);
+      else fail(lines, status, `missing ${this.codexBin}`);
+    } else {
+      if (await cliExists(runner, this.codexBin)) ok(lines, `${this.codexBin} (reviewer)`);
+      else {
+        warn(
+          lines,
+          status,
+          'no codex — review should fall back to another independent configured reviewer',
+        );
+      }
     }
 
-    if (await commandExists(runner, 'tmux')) ok(lines, 'tmux');
-    else warn(lines, status, 'no tmux (fugue-cc panes need it)');
+    if (includesOpencode(harness)) {
+      if (await cliExists(runner, this.opencodeBin)) ok(lines, this.opencodeBin);
+      else fail(lines, status, `missing ${this.opencodeBin}`);
+    }
+
+    if (includesFugueCc(harness)) {
+      if (await commandExists(runner, 'tmux')) ok(lines, 'tmux');
+      else warn(lines, status, 'no tmux (fugue-cc panes need it)');
+    }
 
     if (await executable(this.cacheScript)) {
       ok(lines, 'fuguectl-cache');
@@ -229,7 +278,7 @@ export class PreflightCommand extends Command {
       fail(lines, status, 'missing fuguectl-cache (join barrier depends on it)');
     }
 
-    if (work !== undefined) {
+    if (includesFugueCc(harness) && work !== undefined) {
       try {
         const ping = await runner.run(this.bin, ['ping', 'daemon'], { cwd: work });
         if (/^mount_state:\s*mounted/mu.test(ping.stdout)) ok(lines, `provider mounted (${work})`);
@@ -246,7 +295,7 @@ export class PreflightCommand extends Command {
           `provider not mounted/unreachable (${work}) — cd project && fugue-cc to mount (or fuguectl fleet up)`,
         );
       }
-    } else {
+    } else if (includesFugueCc(harness)) {
       warn(lines, status, 'FUGUE_CC_WORK unset — skip provider mount check');
     }
   }

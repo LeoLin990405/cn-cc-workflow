@@ -85,6 +85,11 @@ suite.ok(
   () => run(preflight, ["--config-only", clean]).status === 0,
 );
 
+suite.ok(
+  "--harness codex delegates to engine CLI",
+  () => run(preflight, ["--harness", "codex", "--config-only", clean]).status === 0,
+);
+
 const gemini = join(tmp, "legacy-gemini.config");
 writeFileSync(gemini, '[agents.cc-x]\ncommand = "gemini-cli"\nmodel = "gemini-3.5-flash"\n');
 suite.ok(
@@ -141,6 +146,10 @@ else process.env.FUGUE_CC_WORK = oldWork;
 
 suite.ok("wrapper delegates to engine CLI", () =>
   readFileSync(calls, "utf8").includes("preflight --config-only "),
+);
+
+suite.ok("wrapper preserves harness option", () =>
+  readFileSync(calls, "utf8").includes("preflight --harness codex --config-only"),
 );
 
 suite.done();

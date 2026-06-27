@@ -42,7 +42,7 @@ Reviewer (`coder`) and planner are likewise harness-agnostic.
 ## Before dispatching
 
 ```
-fuguectl preflight        # go/no-go gate (deps · provider mount/config sanity · legacy CLI guard)
+fuguectl preflight --harness codex|opencode|fugue-cc  # go/no-go gate for the selected runtime path
 fuguectl fleet status     # is the backend fleet up? (if down → fuguectl fleet up)
 ```
 
