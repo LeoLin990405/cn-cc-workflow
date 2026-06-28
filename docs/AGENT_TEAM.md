@@ -50,12 +50,12 @@ Top team:   planner
 
 ## Which to Pick
 
-| Scenario                                                                              | Use                                                                                                                |
-| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Real parallel **implementation** (multi-file, each with its own worktree, persistent) | **fugue runtime profiles** (`fugue-cc` worktrees plus Codex/OpenCode where useful)                                 |
-| **Hierarchical team / sub-agent orchestration**                                       | Host-native subagents plus custom model bridges, when available                                                    |
-| Multi-model **planning**                                                              | Either works (`fuguectl plan --harness <runtime> [--timeout-ms n] [--harness-arg x]` or native parallel subagents) |
-| Cross-model **review**                                                                | independent Codex or other reviewer profile                                                                        |
+| Scenario                                                                              | Use                                                                                                                                             |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Real parallel **implementation** (multi-file, each with its own worktree, persistent) | **fugue runtime profiles** (`fugue-cc` worktrees plus Codex/OpenCode where useful)                                                              |
+| **Hierarchical team / sub-agent orchestration**                                       | Host-native subagents plus custom model bridges, when available                                                                                 |
+| Multi-model **planning**                                                              | Either works (`fuguectl plan --harness <runtime> [--models a,b] [--out <dir>] [--timeout-ms n] [--harness-arg x]` or native parallel subagents) |
+| Cross-model **review**                                                                | independent Codex or other reviewer profile                                                                                                     |
 
 > See the example in `orchestration/agent-team/team-review.workflow.mjs` (a Workflow script: plan panel -> cross-model implementation -> Codex review, deterministic orchestration).
 

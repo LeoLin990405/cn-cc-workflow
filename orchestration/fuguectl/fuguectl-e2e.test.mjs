@@ -77,9 +77,18 @@ suite.ok("help lists planning harness", () =>
   helpOut.includes('plan "<goal>" [--harness fugue-cc|codex|opencode|agy]'),
 );
 suite.ok(
+  "help lists planning models",
+  () =>
+    helpOut.includes('plan "<goal>"') && helpOut.includes("[--models a,b,c]"),
+);
+suite.ok(
   "help lists planning timeout",
   () =>
     helpOut.includes('plan "<goal>"') && helpOut.includes("[--timeout-ms n]"),
+);
+suite.ok(
+  "help lists planning output dir",
+  () => helpOut.includes('plan "<goal>"') && helpOut.includes("[--out <dir>]"),
 );
 suite.ok(
   "help lists planning harness args and task audit",
