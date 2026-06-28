@@ -1,5 +1,6 @@
 import {
   isExperienceSourceKind,
+  isExperienceTrustKind,
   experienceFailureCause,
   experienceQueryTerms,
   experienceScore,
@@ -23,6 +24,7 @@ const renderMethod = (m: Method): string =>
     `created: ${m.created}`,
     `sourceKind: ${m.sourceKind}`,
     ...(m.sourceRef === undefined || m.sourceRef.length === 0 ? [] : [`sourceRef: ${m.sourceRef}`]),
+    `trustKind: ${m.trustKind}`,
     '---',
     m.body,
     '',
@@ -50,6 +52,7 @@ const parseMethod = (content: string, workspace: string, slug: string): Method =
   const created = Number.parseInt(fmField('created'), 10);
   const sourceKind = fmField('sourceKind');
   const sourceRef = singleLine(fmField('sourceRef'));
+  const trustKind = fmField('trustKind');
   const body =
     end !== -1
       ? lines
@@ -64,6 +67,7 @@ const parseMethod = (content: string, workspace: string, slug: string): Method =
     created: Number.isFinite(created) ? created : 0,
     sourceKind: isExperienceSourceKind(sourceKind) ? sourceKind : 'manual',
     ...(sourceRef.length === 0 ? {} : { sourceRef }),
+    trustKind: isExperienceTrustKind(trustKind) ? trustKind : 'trusted',
     body,
   };
 };
@@ -100,6 +104,7 @@ export class FsExperienceStore implements ExperienceStore {
       created: Math.floor(this.clock.now() / 1000),
       sourceKind: input.sourceKind ?? 'manual',
       ...(sourceRef === undefined || sourceRef.length === 0 ? {} : { sourceRef }),
+      trustKind: input.trustKind ?? 'trusted',
       body: input.body,
     };
     await this.fs.write(this.path(method.workspace, method.slug), renderMethod(method));
@@ -124,6 +129,9 @@ export class FsExperienceStore implements ExperienceStore {
     let methods = await this.methodsIn(workspace);
     if (options.sourceKind !== undefined) {
       methods = methods.filter((method) => method.sourceKind === options.sourceKind);
+    }
+    if (options.trust !== undefined && options.trust !== 'all') {
+      methods = methods.filter((method) => method.trustKind === options.trust);
     }
     if (options.failureCause !== undefined) {
       methods = methods.filter((method) => experienceFailureCause(method) === options.failureCause);

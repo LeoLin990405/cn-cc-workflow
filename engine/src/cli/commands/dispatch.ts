@@ -20,8 +20,17 @@ import {
   type StrategyState,
 } from '../../domain/allocation.js';
 import { rankAgents } from '../../domain/allocation-score.js';
-import { EXPERIENCE_SOURCE_KINDS, isExperienceSourceKind } from '../../domain/experience.js';
-import type { ExperienceSourceKind, RecallOptions } from '../../domain/experience.js';
+import {
+  EXPERIENCE_SOURCE_KINDS,
+  EXPERIENCE_TRUST_FILTERS,
+  isExperienceSourceKind,
+  isExperienceTrustFilter,
+} from '../../domain/experience.js';
+import type {
+  ExperienceSourceKind,
+  ExperienceTrustFilter,
+  RecallOptions,
+} from '../../domain/experience.js';
 import { HARNESS_NAMES, type Harness, type HarnessName } from '../../domain/ports/harness.js';
 import { assembleContext, renderBundle, renderTemplate } from '../../domain/prompt-render.js';
 import { isOk } from '../../domain/result.js';
@@ -55,11 +64,12 @@ const recallOptions = (
   query: string | undefined,
   sourceKind: ExperienceSourceKind | undefined,
   limit: number | undefined,
+  trust: ExperienceTrustFilter,
 ): RecallOptions => {
   const options: RecallOptions =
     query === undefined || query.trim().length === 0
-      ? { limit: limit ?? 3 }
-      : { limit: limit ?? 3, query };
+      ? { limit: limit ?? 3, trust }
+      : { limit: limit ?? 3, query, trust };
   return sourceKind === undefined ? options : { ...options, sourceKind };
 };
 
@@ -94,6 +104,20 @@ const parseExperienceLimit = (raw: string | undefined): number | null | undefine
 const experienceLimitError = (raw: string | undefined): string => {
   const rendered = raw === undefined || raw.trim().length === 0 ? '<empty>' : raw.trim();
   return `unknown --experience-limit ${rendered}; expected a positive integer\n`;
+};
+
+const parseAutomaticExperienceTrust = (
+  raw: string | undefined,
+): ExperienceTrustFilter | null | undefined => {
+  if (raw === undefined) return undefined;
+  const value = raw.trim().toLowerCase();
+  return isExperienceTrustFilter(value) && value !== 'untrusted' ? value : null;
+};
+
+const automaticExperienceTrustError = (raw: string | undefined): string => {
+  const rendered = raw === undefined || raw.trim().length === 0 ? '<empty>' : raw.trim();
+  const filters = EXPERIENCE_TRUST_FILTERS.filter((filter) => filter !== 'untrusted');
+  return `unknown --experience-trust ${rendered}; expected one of ${filters.join(', ')}\n`;
 };
 
 const parseSet = (raw: string): readonly [string, string] => {
@@ -240,6 +264,7 @@ export class DispatchCommand extends Command {
   experienceQuery = Option.String('--experience-query');
   experienceSource = Option.String('--experience-source');
   experienceLimit = Option.String('--experience-limit');
+  experienceTrust = Option.String('--experience-trust');
   task = Option.String('--task');
   taskType = Option.String('--task-type');
   skills = Option.String('--skills');
@@ -278,6 +303,11 @@ export class DispatchCommand extends Command {
       this.context.stderr.write(experienceLimitError(this.experienceLimit));
       return 2;
     }
+    const experienceTrust = parseAutomaticExperienceTrust(this.experienceTrust);
+    if (experienceTrust === null) {
+      this.context.stderr.write(automaticExperienceTrustError(this.experienceTrust));
+      return 2;
+    }
     if (experienceSource !== undefined && (this.workspace === undefined || this.workspace === '')) {
       this.context.stderr.write('--experience-source requires --workspace\n');
       return 2;
@@ -286,8 +316,16 @@ export class DispatchCommand extends Command {
       this.context.stderr.write('--experience-limit requires --workspace\n');
       return 2;
     }
+    if (experienceTrust !== undefined && (this.workspace === undefined || this.workspace === '')) {
+      this.context.stderr.write('--experience-trust requires --workspace\n');
+      return 2;
+    }
 
-    const prompt = await this.prompt(experienceSource, experienceLimit);
+    const prompt = await this.prompt(
+      experienceSource,
+      experienceLimit,
+      experienceTrust ?? 'trusted',
+    );
     if (prompt === null) return 2;
     const timeoutMs = parseTimeoutMs(this.timeoutMs);
     if (timeoutMs === null) {
@@ -399,6 +437,7 @@ export class DispatchCommand extends Command {
   private async prompt(
     experienceSource: ExperienceSourceKind | undefined,
     experienceLimit: number | undefined,
+    experienceTrust: ExperienceTrustFilter,
   ): Promise<string | null> {
     const body = await this.promptBody();
     if (body === null) return null;
@@ -415,6 +454,7 @@ export class DispatchCommand extends Command {
         query,
         experienceSource,
         experienceLimit,
+        experienceTrust,
       );
       if (context === null) return null;
       prefix += context;
@@ -449,6 +489,7 @@ export class DispatchCommand extends Command {
     query: string | undefined,
     experienceSource: ExperienceSourceKind | undefined,
     experienceLimit: number | undefined,
+    experienceTrust: ExperienceTrustFilter,
   ): Promise<string | null> {
     const store = new FsWorkspaceStore(this.fs, this.workspaces);
     const workspace = await store.get(name);
@@ -458,7 +499,7 @@ export class DispatchCommand extends Command {
     }
     const methods = await new FsExperienceStore(this.fs, systemClock, this.experience).recall(
       name,
-      recallOptions(query, experienceSource, experienceLimit),
+      recallOptions(query, experienceSource, experienceLimit, experienceTrust),
     );
     return renderBundle(
       assembleContext({

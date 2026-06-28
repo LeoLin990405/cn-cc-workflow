@@ -1208,6 +1208,21 @@ describe('fugue CLI', () => {
         ].join('\n'),
         'utf8',
       );
+      await writeFile(
+        join(experience, 'code', 'task-redis-untrusted.md'),
+        [
+          '---',
+          'workspace: code',
+          'title: Task redis untrusted',
+          'created: 4',
+          'sourceKind: task',
+          'sourceRef: /tmp/TASK-web.md',
+          'trustKind: untrusted',
+          '---',
+          'Untrusted task redis cache recipe.',
+        ].join('\n'),
+        'utf8',
+      );
 
       const dispatched = await run(
         args(
@@ -1222,6 +1237,23 @@ describe('fugue CLI', () => {
           'fix redis cache expiration',
         ),
       );
+      const calledDefault = await readFile(fugueCcCalled, 'utf8');
+      const includeUntrusted = await run(
+        args(
+          'cc-x',
+          '--workspace',
+          'code',
+          '--experience-source',
+          'task',
+          '--experience-limit',
+          '1',
+          '--experience-trust',
+          'all',
+          '--prompt',
+          'fix redis cache expiration',
+        ),
+      );
+      const calledAll = await readFile(fugueCcCalled, 'utf8');
       const invalid = await run(
         args('cc-x', '--workspace', 'code', '--experience-source', 'imported', '--prompt', 'x'),
       );
@@ -1234,12 +1266,21 @@ describe('fugue CLI', () => {
       const limitWithoutWorkspace = await run(
         args('cc-x', '--experience-limit', '1', '--prompt', 'x'),
       );
-      const called = await readFile(fugueCcCalled, 'utf8');
+      const badTrust = await run(
+        args('cc-x', '--workspace', 'code', '--experience-trust', 'untrusted', '--prompt', 'x'),
+      );
+      const trustWithoutWorkspace = await run(
+        args('cc-x', '--experience-trust', 'all', '--prompt', 'x'),
+      );
 
       expect(dispatched.code).toBe(0);
-      expect(called).toContain('[experience] Task redis new');
-      expect(called).not.toContain('[experience] Task redis old');
-      expect(called).not.toContain('[experience] Manual redis');
+      expect(calledDefault).toContain('[experience] Task redis new');
+      expect(calledDefault).not.toContain('[experience] Task redis old');
+      expect(calledDefault).not.toContain('[experience] Manual redis');
+      expect(calledDefault).not.toContain('[experience] Task redis untrusted');
+      expect(includeUntrusted.code).toBe(0);
+      expect(calledAll).toContain('[experience] Task redis untrusted');
+      expect(calledAll).not.toContain('[experience] Task redis new');
       expect(invalid.code).toBe(2);
       expect(invalid.err).toContain('unknown --experience-source imported');
       expect(withoutWorkspace.code).toBe(2);
@@ -1248,6 +1289,10 @@ describe('fugue CLI', () => {
       expect(badLimit.err).toContain('unknown --experience-limit 0');
       expect(limitWithoutWorkspace.code).toBe(2);
       expect(limitWithoutWorkspace.err).toContain('--experience-limit requires --workspace');
+      expect(badTrust.code).toBe(2);
+      expect(badTrust.err).toContain('unknown --experience-trust untrusted');
+      expect(trustWithoutWorkspace.code).toBe(2);
+      expect(trustWithoutWorkspace.err).toContain('--experience-trust requires --workspace');
     });
 
     it('rejects invalid harnesses and missing prompt sources', async () => {
@@ -1489,11 +1534,13 @@ describe('fugue CLI', () => {
       expect(add.out).toContain('cache-first.md');
       expect(list.out).toContain('cache first');
       expect(recall.out).toContain('source=manual');
+      expect(recall.out).toContain('trust=trusted');
       expect(recall.out).toContain('[experience] cache first');
       expect(recall.out).toContain('check cache before curl');
       expect(show.out).toContain('workspace: code');
       expect(show.out).toContain('title: cache first');
       expect(show.out).toContain('sourceKind: manual');
+      expect(show.out).toContain('trustKind: trusted');
     });
 
     it('uses FUGUE_EXPERIENCE when --store is omitted', async () => {
@@ -1684,6 +1731,85 @@ describe('fugue CLI', () => {
       expect(unknown.err).toContain('unknown --source imported');
       expect(empty.code).toBe(1);
       expect(empty.err).toContain('unknown --source <empty>');
+    });
+
+    it('marks and filters experience by trust', async () => {
+      await run(['experience', 'add', '--store', store, 'code', 'trusted route'], {
+        stdin: Readable.from(['Trusted dispatch route.']),
+      });
+      const untrusted = await run(
+        ['experience', 'add', '--store', store, 'code', 'untrusted route', '--trust', 'untrusted'],
+        {
+          stdin: Readable.from(['Untrusted dispatch route.']),
+        },
+      );
+
+      const trustedOnly = await run([
+        'experience',
+        'recall',
+        '--store',
+        store,
+        'code',
+        '--query',
+        'dispatch route',
+        '--trust',
+        'trusted',
+        '--explain',
+      ]);
+      const untrustedOnly = await run([
+        'experience',
+        'recall',
+        '--store',
+        store,
+        'code',
+        '--query',
+        'dispatch route',
+        '--trust',
+        'untrusted',
+        '--explain',
+      ]);
+      const all = await run([
+        'experience',
+        'recall',
+        '--store',
+        store,
+        'code',
+        '--query',
+        'dispatch route',
+        '--trust',
+        'all',
+      ]);
+      const unknownAdd = await run(
+        ['experience', 'add', '--store', store, 'code', 'bad trust', '--trust', 'external'],
+        {
+          stdin: Readable.from(['bad']),
+        },
+      );
+      const unknownRecall = await run([
+        'experience',
+        'recall',
+        '--store',
+        store,
+        'code',
+        '--trust',
+        'external',
+      ]);
+
+      expect(untrusted.code).toBe(0);
+      expect(trustedOnly.out).toContain('trustFilter=trusted');
+      expect(trustedOnly.out).toContain('trust=trusted');
+      expect(trustedOnly.out).toContain('[experience] trusted route');
+      expect(trustedOnly.out).not.toContain('[experience] untrusted route');
+      expect(untrustedOnly.out).toContain('trustFilter=untrusted');
+      expect(untrustedOnly.out).toContain('trust=untrusted');
+      expect(untrustedOnly.out).toContain('[experience] untrusted route');
+      expect(untrustedOnly.out).not.toContain('[experience] trusted route');
+      expect(all.out).toContain('[experience] trusted route');
+      expect(all.out).toContain('[experience] untrusted route');
+      expect(unknownAdd.code).toBe(1);
+      expect(unknownAdd.err).toContain('unknown --trust external');
+      expect(unknownRecall.code).toBe(1);
+      expect(unknownRecall.err).toContain('unknown --trust external');
     });
 
     it('rejects learning from a missing task audit', async () => {
@@ -4816,7 +4942,6 @@ describe('fugue CLI', () => {
         ].join('\n'),
         'utf8',
       );
-
       const context = await run([
         'workspace',
         'context',
@@ -4877,6 +5002,21 @@ describe('fugue CLI', () => {
         ].join('\n'),
         'utf8',
       );
+      await writeFile(
+        join(experience, 'code', 'task-redis-untrusted.md'),
+        [
+          '---',
+          'workspace: code',
+          'title: Task redis untrusted',
+          'created: 6',
+          'sourceKind: task',
+          'sourceRef: /tmp/TASK-web.md',
+          'trustKind: untrusted',
+          '---',
+          'Untrusted task redis cache recipe.',
+        ].join('\n'),
+        'utf8',
+      );
 
       const context = await run([
         'workspace',
@@ -4889,6 +5029,23 @@ describe('fugue CLI', () => {
         'task',
         '--experience-limit',
         '1',
+        'code',
+        '--task',
+        'fix redis cache expiration',
+      ]);
+      const contextAll = await run([
+        'workspace',
+        'context',
+        ...wsArgs(),
+        ...modelArgs(),
+        '--experience',
+        experience,
+        '--experience-source',
+        'task',
+        '--experience-limit',
+        '1',
+        '--experience-trust',
+        'all',
         'code',
         '--task',
         'fix redis cache expiration',
@@ -4926,17 +5083,34 @@ describe('fugue CLI', () => {
         'not-a-number',
         'code',
       ]);
+      const badTrust = await run([
+        'workspace',
+        'context',
+        ...wsArgs(),
+        ...modelArgs(),
+        '--experience',
+        experience,
+        '--experience-trust',
+        'untrusted',
+        'code',
+      ]);
 
       expect(context.code).toBe(0);
       expect(context.out).toContain('[experience] Task redis new');
       expect(context.out).not.toContain('[experience] Task redis old');
       expect(context.out).not.toContain('[experience] Manual redis');
+      expect(context.out).not.toContain('[experience] Task redis untrusted');
+      expect(contextAll.code).toBe(0);
+      expect(contextAll.out).toContain('[experience] Task redis untrusted');
+      expect(contextAll.out).not.toContain('[experience] Task redis new');
       expect(unknown.code).toBe(2);
       expect(unknown.err).toContain('unknown --experience-source imported');
       expect(empty.code).toBe(2);
       expect(empty.err).toContain('unknown --experience-source <empty>');
       expect(badLimit.code).toBe(2);
       expect(badLimit.err).toContain('unknown --experience-limit not-a-number');
+      expect(badTrust.code).toBe(2);
+      expect(badTrust.err).toContain('unknown --experience-trust untrusted');
     });
   });
 

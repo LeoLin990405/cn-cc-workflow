@@ -22,6 +22,7 @@ describe('explainRecallMatch', () => {
       score: 2,
       matchedTerms: ['dispatch', 'output'],
       sourceKind: 'manual',
+      trustKind: 'trusted',
       failureCause: 'retrieval',
     });
   });
@@ -35,7 +36,12 @@ describe('explainRecallMatch', () => {
       { query: 'the and to' },
     );
 
-    expect(explanation).toEqual({ score: 0, matchedTerms: [], sourceKind: 'manual' });
+    expect(explanation).toEqual({
+      score: 0,
+      matchedTerms: [],
+      sourceKind: 'manual',
+      trustKind: 'trusted',
+    });
   });
 
   it('includes the active minimum score gate when provided', () => {
@@ -51,6 +57,7 @@ describe('explainRecallMatch', () => {
       score: 3,
       matchedTerms: ['dispatch', 'output', 'anchors'],
       sourceKind: 'manual',
+      trustKind: 'trusted',
       minScore: 2,
     });
   });
@@ -62,6 +69,7 @@ describe('explainRecallMatch', () => {
         body: 'Use source task provenance in recall audits.',
         sourceKind: 'task',
         sourceRef: '/tmp/TASK.md',
+        trustKind: 'trusted',
       },
       { query: 'source task provenance' },
     );
@@ -71,6 +79,7 @@ describe('explainRecallMatch', () => {
       matchedTerms: ['source', 'task', 'provenance'],
       sourceKind: 'task',
       sourceRef: '/tmp/TASK.md',
+      trustKind: 'trusted',
     });
   });
 
@@ -81,6 +90,7 @@ describe('explainRecallMatch', () => {
         body: 'Use task provenance in recall audits.',
         sourceKind: 'task',
         sourceRef: '/tmp/TASK.md',
+        trustKind: 'trusted',
       },
       { query: 'task provenance', sourceKind: 'task' },
     );
@@ -90,7 +100,28 @@ describe('explainRecallMatch', () => {
       matchedTerms: ['task', 'provenance'],
       sourceKind: 'task',
       sourceRef: '/tmp/TASK.md',
+      trustKind: 'trusted',
       sourceFilter: 'task',
+    });
+  });
+
+  it('reports stored trust and the active trust filter', () => {
+    const explanation = explainRecallMatch(
+      {
+        title: 'web imported note',
+        body: 'Treat browser-provided memory as untrusted until reviewed.',
+        sourceKind: 'manual',
+        trustKind: 'untrusted',
+      },
+      { query: 'browser memory', trust: 'untrusted' },
+    );
+
+    expect(explanation).toEqual({
+      score: 2,
+      matchedTerms: ['browser', 'memory'],
+      sourceKind: 'manual',
+      trustKind: 'untrusted',
+      trustFilter: 'untrusted',
     });
   });
 });

@@ -5,13 +5,18 @@ import { Command, Option } from 'clipanion';
 import { FsExperienceStore } from '../../adapters/experience/fs-experience-store.js';
 import {
   EXPERIENCE_SOURCE_KINDS,
+  EXPERIENCE_TRUST_FILTERS,
+  EXPERIENCE_TRUST_KINDS,
   FAILURE_CAUSES,
   explainRecallMatch,
   isExperienceSourceKind,
   isFailureCause,
+  isExperienceTrustFilter,
+  isExperienceTrustKind,
 } from '../../domain/experience.js';
 import type {
   ExperienceSourceKind,
+  ExperienceTrustFilter,
   FailureCause,
   Method,
   RecallOptions,
@@ -34,7 +39,7 @@ const readStream = async (stream: NodeJS.ReadableStream): Promise<string> => {
 const renderRecall = (title: string, body: string): string => `[experience] ${title}\n${body}\n\n`;
 
 const renderRecallExplanation = (
-  method: Pick<Method, 'title' | 'body' | 'sourceKind' | 'sourceRef'>,
+  method: Pick<Method, 'title' | 'body' | 'sourceKind' | 'sourceRef' | 'trustKind'>,
   options: RecallOptions,
 ): string => {
   const explanation = explainRecallMatch(method, options);
@@ -43,11 +48,12 @@ const renderRecallExplanation = (
   const filter = options.failureCause ?? '-';
   const minScore = explanation.minScore ?? '-';
   const sourceFilter = explanation.sourceFilter ?? '-';
+  const trustFilter = explanation.trustFilter ?? '-';
   const source =
     explanation.sourceRef === undefined
       ? explanation.sourceKind
       : `${explanation.sourceKind}:${explanation.sourceRef}`;
-  return `[experience:explain] score=${explanation.score} minScore=${minScore} matched=${matched} failureCause=${failureCause} filter=${filter} sourceFilter=${sourceFilter} source=${source}\n`;
+  return `[experience:explain] score=${explanation.score} minScore=${minScore} matched=${matched} failureCause=${failureCause} filter=${filter} sourceFilter=${sourceFilter} trustFilter=${trustFilter} source=${source} trust=${explanation.trustKind}\n`;
 };
 
 const parseLimit = (raw: string): number => {
@@ -155,6 +161,19 @@ const sourceKindError = (sourceKind: string | undefined): string => {
   return `unknown --source ${rendered}; expected one of ${EXPERIENCE_SOURCE_KINDS.join(', ')}\n`;
 };
 
+const normalizeTrustKind = (raw: string | undefined): string | undefined =>
+  raw?.trim().toLowerCase();
+
+const trustKindError = (trustKind: string | undefined): string => {
+  const rendered = trustKind === undefined || trustKind.length === 0 ? '<empty>' : trustKind;
+  return `unknown --trust ${rendered}; expected one of ${EXPERIENCE_TRUST_KINDS.join(', ')}\n`;
+};
+
+const trustFilterError = (trustFilter: string | undefined): string => {
+  const rendered = trustFilter === undefined || trustFilter.length === 0 ? '<empty>' : trustFilter;
+  return `unknown --trust ${rendered}; expected one of ${EXPERIENCE_TRUST_FILTERS.join(', ')}\n`;
+};
+
 abstract class ExperienceCommand extends Command {
   store = Option.String('--store', defaultExperienceDir());
 
@@ -169,8 +188,16 @@ export class ExperienceAddCommand extends ExperienceCommand {
   workspace = Option.String();
   title = Option.String();
   from = Option.String('--from');
+  trustKind = Option.String('--trust');
 
   override async execute(): Promise<number> {
+    const trustKind = normalizeTrustKind(this.trustKind);
+    if (this.trustKind !== undefined) {
+      if (trustKind === undefined || trustKind.length === 0 || !isExperienceTrustKind(trustKind)) {
+        this.context.stderr.write(trustKindError(trustKind));
+        return 1;
+      }
+    }
     const body =
       this.from === undefined ? await readStream(this.context.stdin) : await fs().read(this.from);
     if (body === null) {
@@ -181,6 +208,7 @@ export class ExperienceAddCommand extends ExperienceCommand {
       workspace: this.workspace,
       title: this.title,
       sourceKind: 'manual',
+      ...(trustKind !== undefined && isExperienceTrustKind(trustKind) ? { trustKind } : {}),
       body,
     });
     if (!isOk(result)) {
@@ -313,6 +341,7 @@ export class ExperienceRecallCommand extends ExperienceCommand {
   limit = Option.String('--limit', '3');
   failureCause = Option.String('--failure-cause');
   sourceKind = Option.String('--source');
+  trust = Option.String('--trust');
   minScore = Option.String('--min-score');
   explain = Option.Boolean('--explain', false);
 
@@ -332,6 +361,17 @@ export class ExperienceRecallCommand extends ExperienceCommand {
         !isExperienceSourceKind(sourceKind)
       ) {
         this.context.stderr.write(sourceKindError(sourceKind));
+        return 1;
+      }
+    }
+    const trustFilter = normalizeTrustKind(this.trust);
+    if (this.trust !== undefined) {
+      if (
+        trustFilter === undefined ||
+        trustFilter.length === 0 ||
+        !isExperienceTrustFilter(trustFilter)
+      ) {
+        this.context.stderr.write(trustFilterError(trustFilter));
         return 1;
       }
     }
@@ -357,6 +397,11 @@ export class ExperienceRecallCommand extends ExperienceCommand {
       sourceKind !== undefined && isExperienceSourceKind(sourceKind) ? sourceKind : undefined;
     if (recallSourceKind !== undefined) {
       options = { ...options, sourceKind: recallSourceKind };
+    }
+    const recallTrustFilter: ExperienceTrustFilter | undefined =
+      trustFilter !== undefined && isExperienceTrustFilter(trustFilter) ? trustFilter : undefined;
+    if (recallTrustFilter !== undefined) {
+      options = { ...options, trust: recallTrustFilter };
     }
     if (minScore !== undefined) {
       options = { ...options, minScore };

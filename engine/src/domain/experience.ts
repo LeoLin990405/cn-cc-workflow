@@ -9,6 +9,7 @@ export interface Method {
   readonly created: number; // epoch seconds (bash `date +%s`)
   readonly sourceKind: ExperienceSourceKind;
   readonly sourceRef?: string;
+  readonly trustKind: ExperienceTrustKind;
   readonly body: string;
 }
 
@@ -17,6 +18,7 @@ export interface AddMethod {
   readonly title: string;
   readonly sourceKind?: ExperienceSourceKind;
   readonly sourceRef?: string;
+  readonly trustKind?: ExperienceTrustKind;
   readonly body: string;
 }
 
@@ -26,6 +28,20 @@ export type ExperienceSourceKind = (typeof EXPERIENCE_SOURCE_KINDS)[number];
 
 export const isExperienceSourceKind = (value: string): value is ExperienceSourceKind =>
   (EXPERIENCE_SOURCE_KINDS as readonly string[]).includes(value);
+
+export const EXPERIENCE_TRUST_KINDS = ['trusted', 'untrusted'] as const;
+
+export type ExperienceTrustKind = (typeof EXPERIENCE_TRUST_KINDS)[number];
+
+export const isExperienceTrustKind = (value: string): value is ExperienceTrustKind =>
+  (EXPERIENCE_TRUST_KINDS as readonly string[]).includes(value);
+
+export const EXPERIENCE_TRUST_FILTERS = ['trusted', 'untrusted', 'all'] as const;
+
+export type ExperienceTrustFilter = (typeof EXPERIENCE_TRUST_FILTERS)[number];
+
+export const isExperienceTrustFilter = (value: string): value is ExperienceTrustFilter =>
+  (EXPERIENCE_TRUST_FILTERS as readonly string[]).includes(value);
 
 export const FAILURE_CAUSES = [
   'planning',
@@ -103,19 +119,23 @@ export interface RecallMatchExplanation {
   readonly matchedTerms: readonly string[];
   readonly sourceKind: ExperienceSourceKind;
   readonly sourceRef?: string;
+  readonly trustKind: ExperienceTrustKind;
   readonly failureCause?: FailureCause;
   readonly minScore?: number;
   readonly sourceFilter?: ExperienceSourceKind;
+  readonly trustFilter?: ExperienceTrustFilter;
 }
 
 export const explainRecallMatch = (
-  method: Pick<Method, 'title' | 'body'> & Partial<Pick<Method, 'sourceKind' | 'sourceRef'>>,
+  method: Pick<Method, 'title' | 'body'> &
+    Partial<Pick<Method, 'sourceKind' | 'sourceRef' | 'trustKind'>>,
   options: RecallOptions = {},
 ): RecallMatchExplanation => {
   const terms = experienceQueryTerms(options.query);
   const matchedTerms = experienceMatchedTerms(method, terms);
   const failureCause = experienceFailureCause(method);
   const sourceKind = method.sourceKind ?? 'manual';
+  const trustKind = method.trustKind ?? 'trusted';
   return {
     score: matchedTerms.length,
     matchedTerms,
@@ -123,9 +143,11 @@ export const explainRecallMatch = (
     ...(method.sourceRef === undefined || method.sourceRef.length === 0
       ? {}
       : { sourceRef: method.sourceRef }),
+    trustKind,
     ...(failureCause === undefined ? {} : { failureCause }),
     ...(options.minScore === undefined ? {} : { minScore: options.minScore }),
     ...(options.sourceKind === undefined ? {} : { sourceFilter: options.sourceKind }),
+    ...(options.trust === undefined ? {} : { trustFilter: options.trust }),
   };
 };
 
@@ -142,4 +164,5 @@ export interface RecallOptions {
   readonly failureCause?: FailureCause;
   readonly minScore?: number;
   readonly sourceKind?: ExperienceSourceKind;
+  readonly trust?: ExperienceTrustFilter;
 }

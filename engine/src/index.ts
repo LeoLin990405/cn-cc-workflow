@@ -74,7 +74,26 @@ export type {
   AddMethod,
   ExperienceError,
   ExperienceErrorKind,
+  ExperienceSourceKind,
+  ExperienceTrustFilter,
+  ExperienceTrustKind,
+  FailureCause,
   RecallOptions,
+} from './domain/experience.js';
+export {
+  EXPERIENCE_SOURCE_KINDS,
+  EXPERIENCE_TRUST_FILTERS,
+  EXPERIENCE_TRUST_KINDS,
+  FAILURE_CAUSES,
+  explainRecallMatch,
+  experienceFailureCause,
+  experienceMatchedTerms,
+  experienceQueryTerms,
+  experienceScore,
+  isExperienceSourceKind,
+  isExperienceTrustFilter,
+  isExperienceTrustKind,
+  isFailureCause,
 } from './domain/experience.js';
 export { containsSecret, slugify } from './domain/experience-redact.js';
 export type { OwnershipRule, Ownership } from './domain/ownership.js';

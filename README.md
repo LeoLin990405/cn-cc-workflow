@@ -209,19 +209,27 @@ Each record also carries lightweight provenance: `experience add` writes
 `source=manual`, while `experience learn --task <TASK.md>` writes
 `source=task:<TASK.md>`. Use `--source manual|task` when manual notes and
 task-derived memories should be routed separately; this is an operator
-routing/audit control, not a full authority or poisoning defense. Add
-`--explain` to recall when you want the audit line that shows score, matched
-query terms, stored failure cause, active cause filter, active source filter,
-and provenance source.
+routing/audit control, not a full authority or poisoning defense. Records also
+carry `trustKind=trusted|untrusted`: `experience add --trust untrusted` marks
+content imported from a browser, model, or other unreviewed channel, while
+operator notes and learned TASK audits default to `trusted`. Add `--explain` to
+recall when you want the audit line that shows score, matched query terms,
+stored failure cause, active cause filter, active source filter, active trust
+filter, provenance source, and stored trust.
 Add `--min-score <n>` with a query when you want a stricter manual recall gate:
 weak one-token matches are dropped from that recall result.
 For automatic memory injection, pass `--experience-source manual|task` to
 `workspace context` or `dispatch --workspace`; it applies the same source route
 before query ranking and prompt assembly. Add `--experience-limit <n>` on the
 same automatic-injection paths when a smaller prompt budget should receive fewer
-experience records.
+experience records. Automatic injection is trusted-only by default; add
+`--experience-trust all` only when you intentionally want untrusted records in
+the prompt for inspection or sandboxed work.
 
 ```bash
+cat web-note.md | fuguectl experience add code "browser memory import" \
+  --trust untrusted
+
 fuguectl experience learn code "failed-query retro" \
   --task TASK.md \
   --allow-failure \
@@ -231,6 +239,7 @@ fuguectl experience learn code "failed-query retro" \
 fuguectl experience recall code \
   --failure-cause retrieval \
   --source task \
+  --trust trusted \
   --query "dispatch output" \
   --min-score 2 \
   --explain
@@ -238,15 +247,17 @@ fuguectl experience recall code \
 fuguectl workspace context code \
   --experience-source task \
   --experience-limit 1 \
+  --experience-trust all \
   --task "fix dispatch output"
 ```
 
 This follows the same direction as Agent Workflow Memory, AgentHER, MemRL, and
 recent agent-native memory, budget-tier routing, token-economics,
 store-routing, and provenance studies: do not replay every trace. FuguNano's
-current step is deliberately modest: select by workspace, source, failure mode,
-retrieval evidence, utility threshold, and an explicit recall cap; learned
-budget-tier routing is future work.
+current step is deliberately modest: select by workspace, source, write-time
+trust mark, failure mode, retrieval evidence, utility threshold, and an explicit
+recall cap; learned budget-tier routing and formal authority elevation are
+future work.
 
 ## TypeScript Engine
 
@@ -272,7 +283,7 @@ fugue init [--dry-run|--write]
 fugue fleet status|up|down
 fugue allocate <task-type>|list|record|feed|stats|reset|decay
 fugue smoke [--harness all|codex|opencode|agy] [--timeout-ms n] [--task <file>] [--out-dir <dir>]
-fugue dispatch <target> --harness fugue-cc|codex|opencode|agy [--timeout-ms n] [--codex-clean] [--harness-arg x] [--out <file>] [--require-output] [--verbose] [--workspace ws [--experience-query q] [--experience-source manual|task] [--experience-limit n]] --template <name>|--prompt-file <file>|--prompt <text>
+fugue dispatch <target> --harness fugue-cc|codex|opencode|agy [--timeout-ms n] [--codex-clean] [--harness-arg x] [--out <file>] [--require-output] [--verbose] [--workspace ws [--experience-query q] [--experience-source manual|task] [--experience-limit n] [--experience-trust trusted|all]] --template <name>|--prompt-file <file>|--prompt <text>
 fugue integrate --work <repo> --agents "a b" [--ownership file] [--dry]
 fugue skills index|list|match|show|inject|validate|forge
 fugue preflight [--harness fugue-cc|codex|opencode|agy|lite|all] [--model provider/model|--target provider/model] [--config-only] [provider.config]
@@ -280,10 +291,10 @@ fugue cache init|put|fail|status|barrier|collect|list|resume --cache <dir>
 fugue plan "<goal>" --harness fugue-cc|codex|opencode|agy|lite --out <dir> [--models m1,m2] [--timeout-ms n] [--allow-partial] [--codex-clean] [--harness-arg x] [--codex-arg x] [--opencode-arg x] [--agy-arg x] [--task <file>]
 fugue task new|log|done
 fugue template <name> --dir <templates> [--set KEY=VALUE ...]
-fugue workspace list|show|model|context [context: --experience-source manual|task --experience-limit n]
-fugue experience add|list|show --store <dir>
+fugue workspace list|show|model|context [context: --experience-source manual|task --experience-limit n --experience-trust trusted|all]
+fugue experience add|list|show --store <dir> [add: --trust trusted|untrusted]
 fugue experience learn --store <dir> [--failure-cause cause]
-fugue experience recall --store <dir> [--failure-cause cause] [--source manual|task] [--min-score n] [--explain]
+fugue experience recall --store <dir> [--failure-cause cause] [--source manual|task] [--trust trusted|untrusted|all] [--min-score n] [--explain]
 fugue summary <round> --cache <dir> [--task <file>]
 fugue runtime check [--strict] --state <dir> [--skill <installed SKILL.md>] [--alias-skill <legacy SKILL.md>] [--repo-skill <repo SKILL.md>]
 fugue runtime adapt --state <dir> [--skill <installed SKILL.md>] [--alias-skill <legacy SKILL.md>] [--repo-skill <repo SKILL.md>]
@@ -426,7 +437,7 @@ GitHub Security Advisory.
 - Shanghai Artificial Intelligence Laboratory's [Self-Harness paper](https://arxiv.org/abs/2606.09498) for the harness-improvement loop that inspired `fuguectl self-harness`.
 - [Agent Workflow Memory](https://arxiv.org/abs/2409.07429), [AgentHER](https://arxiv.org/abs/2603.21357), [MemRL](https://arxiv.org/abs/2601.03192), [How Memory Management Impacts LLM Agents](https://arxiv.org/abs/2505.16067), [Agent-Native Memory Systems](https://arxiv.org/abs/2606.24775), [RCR-Router](https://arxiv.org/abs/2508.04903), [BudgetMem](https://arxiv.org/abs/2602.06025), [Token Economics for LLM Agents](https://arxiv.org/abs/2605.09104), [Graph Memory for LLM Agents](https://arxiv.org/abs/2606.06036), [Externalization in LLM Agents](https://arxiv.org/abs/2604.08224), [Cost-Sensitive Store Routing](https://arxiv.org/abs/2603.15658), [Compute Allocation for Reasoning-Intensive Retrieval Agents](https://openreview.net/forum?id=nqr4eTODKl), and [RecoAtlas](https://arxiv.org/abs/2605.18805) for the cause-aware, provenance-visible, budgeted, explainable, utility-gated experience replay direction.
 - [PROV-AGENT](https://arxiv.org/abs/2508.02866) and [LLM Agents for Interactive Workflow Provenance](https://arxiv.org/abs/2509.13978) for the lightweight agentic-workflow provenance framing behind task-derived memory source metadata.
-- [Securing LLM-Agent Long-Term Memory Against Poisoning](https://arxiv.org/abs/2606.24322) and [From Untrusted Input to Trusted Memory](https://arxiv.org/abs/2606.04329) for the adjacent origin-bound authority and memory write-channel risks that future memory security work must address.
+- [Securing LLM-Agent Long-Term Memory Against Poisoning](https://arxiv.org/abs/2606.24322) and [From Untrusted Input to Trusted Memory](https://arxiv.org/abs/2606.04329) / [OpenReview](https://openreview.net/forum?id=5cgg9yenCZ) for the write-time trust metadata and trusted-only automatic injection gate that starts addressing memory write-channel risks.
 - [kunchenguid/no-mistakes](https://github.com/kunchenguid/no-mistakes) and [lavish-axi](https://github.com/kunchenguid/lavish-axi) for loop-state and docs-drift ideas.
 - [merkyor/Lynn](https://gitee.com/merkyor/Lynn) for orchestrator-side ownership enforcement inspiration.
 - Anthropic's official `skill-creator` meta-skill for the skill authoring and validation flow.

@@ -31,11 +31,12 @@ describe('FsExperienceStore', () => {
       slug: 'cache-first',
       created: 5, // seconds
       sourceKind: 'manual',
+      trustKind: 'trusted',
       body: 'check cache before curl',
     });
   });
 
-  it('persists task provenance and defaults old records to manual provenance', async () => {
+  it('persists task provenance/trust and defaults old records to manual trusted provenance', async () => {
     const clock = fakeClock(5_000);
     const fs = new MemoryFileSystem(clock);
     const store = new FsExperienceStore(fs, clock, '/exp');
@@ -44,6 +45,7 @@ describe('FsExperienceStore', () => {
       title: 'task retro',
       sourceKind: 'task',
       sourceRef: '/tmp/TASK.md',
+      trustKind: 'untrusted',
       body: 'learned from a completed task',
     });
     await fs.write(
@@ -58,6 +60,7 @@ describe('FsExperienceStore', () => {
       created: 5,
       sourceKind: 'task',
       sourceRef: '/tmp/TASK.md',
+      trustKind: 'untrusted',
       body: 'learned from a completed task',
     });
     expect(await store.get('code', 'old')).toEqual({
@@ -66,6 +69,7 @@ describe('FsExperienceStore', () => {
       slug: 'old',
       created: 4,
       sourceKind: 'manual',
+      trustKind: 'trusted',
       body: 'legacy body',
     });
   });
@@ -96,6 +100,7 @@ describe('FsExperienceStore', () => {
       created: 4,
       sourceKind: 'task',
       sourceRef: '/tmp/TASK.md overwrite: nope',
+      trustKind: 'trusted',
       body: 'legacy body',
     });
   });
@@ -109,11 +114,13 @@ describe('FsExperienceStore', () => {
       title: 'task retro',
       sourceKind: 'task',
       sourceRef: '/tmp/TASK.md\rinjected: nope\nstill: nope',
+      trustKind: 'untrusted',
       body: 'learned from a completed task',
     });
 
     const raw = await fs.read('/exp/code/task-retro.md');
     expect(raw).toContain('sourceRef: /tmp/TASK.md injected: nope still: nope\n');
+    expect(raw).toContain('trustKind: untrusted\n');
     expect(raw).not.toContain('\ninjected: nope\n');
     expect(raw).not.toContain('\r');
   });
@@ -206,6 +213,47 @@ describe('FsExperienceStore', () => {
 
     expect(taskOnly.map((m) => m.title)).toEqual(['task dispatch output']);
     expect(manualOnly.map((m) => m.title)).toEqual(['manual dispatch output']);
+  });
+
+  it('recall can filter by trust before query ranking', async () => {
+    const clock = fakeClock(1_000);
+    const store = make(clock);
+    await store.add({
+      workspace: 'code',
+      title: 'trusted dispatch output',
+      trustKind: 'trusted',
+      body: 'Trusted dispatch output anchors.',
+    });
+    clock.set(2_000);
+    await store.add({
+      workspace: 'code',
+      title: 'untrusted dispatch output',
+      trustKind: 'untrusted',
+      body: 'Untrusted dispatch output anchors.',
+    });
+
+    const trustedOnly = await store.recall('code', {
+      query: 'dispatch output anchors',
+      trust: 'trusted',
+      limit: 3,
+    });
+    const untrustedOnly = await store.recall('code', {
+      query: 'dispatch output anchors',
+      trust: 'untrusted',
+      limit: 3,
+    });
+    const all = await store.recall('code', {
+      query: 'dispatch output anchors',
+      trust: 'all',
+      limit: 3,
+    });
+
+    expect(trustedOnly.map((m) => m.title)).toEqual(['trusted dispatch output']);
+    expect(untrustedOnly.map((m) => m.title)).toEqual(['untrusted dispatch output']);
+    expect(all.map((m) => m.title)).toEqual([
+      'untrusted dispatch output',
+      'trusted dispatch output',
+    ]);
   });
 
   it('recall can reject weak query matches with a minimum score gate', async () => {

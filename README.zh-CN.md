@@ -171,13 +171,16 @@ stdout 或 durable artifact。`task new` 使用独占创建避免并发 operator
 ## Experience Memory
 
 FuguNano 现在把 memory 当成一个小型的 write-manage-read loop，而不是把日志原样塞回上下文。完成的 TASK 可以蒸馏成 reusable method；终态失败或 blocked 的 TASK 默认仍会被拒绝，只有 operator 明确提供 `--allow-failure --lesson` 时才会作为“重标注失败经验”进入 memory。重标注失败还可以携带受控的 `--failure-cause` 标签（`planning`、`context`、`retrieval`、`tooling`、`implementation`、`verification`、`integration`、`runtime`、`policy`、`other`），recall 时可以先按失败原因过滤，再做 query ranking。
-每条记录也会带轻量 provenance：`experience add` 写成 `source=manual`，`experience learn --task <TASK.md>` 写成 `source=task:<TASK.md>`。需要把手写经验和 TASK 蒸馏经验分开路由时，用 `--source manual|task`；这是 operator 侧的路由/审计控制，不是完整的 authority 或 poisoning 防御。需要审计“为什么选中这条经验”时，加 `--explain`；输出会给出分数、命中的 query 词、存储的 failure cause、当前启用的 cause filter、source filter，以及这条经验的来源。
+每条记录也会带轻量 provenance：`experience add` 写成 `source=manual`，`experience learn --task <TASK.md>` 写成 `source=task:<TASK.md>`。需要把手写经验和 TASK 蒸馏经验分开路由时，用 `--source manual|task`；这是 operator 侧的路由/审计控制，不是完整 authority。记录还会带 `trustKind=trusted|untrusted`：从浏览器、模型输出或其它未经复核通道导入的内容可以用 `experience add --trust untrusted` 标记；operator 手写经验和 TASK 审计学习默认是 `trusted`。需要审计“为什么选中这条经验”时，加 `--explain`；输出会给出分数、命中的 query 词、存储的 failure cause、当前启用的 cause filter、source filter、trust filter、这条经验的来源和 stored trust。
 需要更保守时，可以在带 query 的手动 recall 上加 `--min-score <n>`；低于这个分数的弱匹配会从本次 recall 结果里被丢掉。
 自动注入 Memory 时，可以给 `workspace context` 或 `dispatch --workspace`
 加 `--experience-source manual|task`；它会在 query ranking 和 prompt
-assembly 之前套用同一条来源路由。需要更小 prompt 预算时，在同一条自动注入路径上加 `--experience-limit <n>`，限制注入的经验条数。
+assembly 之前套用同一条来源路由。需要更小 prompt 预算时，在同一条自动注入路径上加 `--experience-limit <n>`，限制注入的经验条数。自动注入默认只回放 trusted 经验；只有在明确要检查或沙盒使用 untrusted memory 时，才加 `--experience-trust all` 放宽。
 
 ```bash
+cat web-note.md | fuguectl experience add code "browser memory import" \
+  --trust untrusted
+
 fuguectl experience learn code "failed-query retro" \
   --task TASK.md \
   --allow-failure \
@@ -187,6 +190,7 @@ fuguectl experience learn code "failed-query retro" \
 fuguectl experience recall code \
   --failure-cause retrieval \
   --source task \
+  --trust trusted \
   --query "dispatch output" \
   --min-score 2 \
   --explain
@@ -194,10 +198,11 @@ fuguectl experience recall code \
 fuguectl workspace context code \
   --experience-source task \
   --experience-limit 1 \
+  --experience-trust all \
   --task "fix dispatch output"
 ```
 
-这个方向借鉴的是 Agent Workflow Memory、AgentHER、MemRL、agent-native memory、budget-tier routing、token economics、store routing 与 workflow provenance 研究里的共同结论：不要回放所有 trace。FuguNano 当前这一步刻意保持朴素：按 workspace、来源、失败模式、检索证据、效用门槛和显式 recall cap 来选择；学习式 budget-tier routing 是后续方向。
+这个方向借鉴的是 Agent Workflow Memory、AgentHER、MemRL、agent-native memory、budget-tier routing、token economics、store routing、workflow provenance 与 memory poisoning 研究里的共同结论：不要回放所有 trace。FuguNano 当前这一步刻意保持朴素：按 workspace、来源、写入时 trust 标记、失败模式、检索证据、效用门槛和显式 recall cap 来选择；学习式 budget-tier routing 与形式化 authority elevation 是后续方向。
 
 ## TypeScript Engine
 
@@ -219,7 +224,7 @@ fugue init [--dry-run|--write]
 fugue fleet status|up|down
 fugue allocate <task-type>|list|record|feed|stats|reset|decay
 fugue smoke [--harness all|codex|opencode|agy] [--timeout-ms n] [--task <file>] [--out-dir <dir>]
-fugue dispatch <target> --harness fugue-cc|codex|opencode|agy [--timeout-ms n] [--codex-clean] [--harness-arg x] [--out <file>] [--require-output] [--verbose] [--workspace ws [--experience-query q] [--experience-source manual|task] [--experience-limit n]] --template <name>|--prompt-file <file>|--prompt <text>
+fugue dispatch <target> --harness fugue-cc|codex|opencode|agy [--timeout-ms n] [--codex-clean] [--harness-arg x] [--out <file>] [--require-output] [--verbose] [--workspace ws [--experience-query q] [--experience-source manual|task] [--experience-limit n] [--experience-trust trusted|all]] --template <name>|--prompt-file <file>|--prompt <text>
 fugue integrate --work <repo> --agents "a b" [--ownership file] [--dry]
 fugue skills index|list|match|show|inject|validate|forge
 fugue preflight [--harness fugue-cc|codex|opencode|agy|lite|all] [--model provider/model|--target provider/model] [--config-only] [provider.config]
@@ -227,10 +232,10 @@ fugue cache init|put|fail|status|barrier|collect|list|resume --cache <dir>
 fugue plan "<goal>" --harness fugue-cc|codex|opencode|agy|lite --out <dir> [--models m1,m2] [--timeout-ms n] [--allow-partial] [--codex-clean] [--harness-arg x] [--codex-arg x] [--opencode-arg x] [--agy-arg x] [--task <file>]
 fugue task new|log|done
 fugue template <name> --dir <templates> [--set KEY=VALUE ...]
-fugue workspace list|show|model|context [context: --experience-source manual|task --experience-limit n]
-fugue experience add|list|show --store <dir>
+fugue workspace list|show|model|context [context: --experience-source manual|task --experience-limit n --experience-trust trusted|all]
+fugue experience add|list|show --store <dir> [add: --trust trusted|untrusted]
 fugue experience learn --store <dir> [--failure-cause cause]
-fugue experience recall --store <dir> [--failure-cause cause] [--source manual|task] [--min-score n] [--explain]
+fugue experience recall --store <dir> [--failure-cause cause] [--source manual|task] [--trust trusted|untrusted|all] [--min-score n] [--explain]
 fugue summary <round> --cache <dir> [--task <file>]
 fugue runtime check [--strict] --state <dir> [--skill <installed SKILL.md>] [--alias-skill <legacy SKILL.md>] [--repo-skill <repo SKILL.md>]
 fugue runtime adapt --state <dir> [--skill <installed SKILL.md>] [--alias-skill <legacy SKILL.md>] [--repo-skill <repo SKILL.md>]
@@ -350,7 +355,7 @@ npm run test:engine
 - 上海人工智能实验室的 [Self-Harness 论文](https://arxiv.org/abs/2606.09498) 启发了 `fuguectl self-harness` 的 harness-improvement loop。
 - [Agent Workflow Memory](https://arxiv.org/abs/2409.07429)、[AgentHER](https://arxiv.org/abs/2603.21357)、[MemRL](https://arxiv.org/abs/2601.03192)、[How Memory Management Impacts LLM Agents](https://arxiv.org/abs/2505.16067)、[Agent-Native Memory Systems](https://arxiv.org/abs/2606.24775)、[RCR-Router](https://arxiv.org/abs/2508.04903)、[BudgetMem](https://arxiv.org/abs/2602.06025)、[Token Economics for LLM Agents](https://arxiv.org/abs/2605.09104)、[Graph Memory for LLM Agents](https://arxiv.org/abs/2606.06036)、[Externalization in LLM Agents](https://arxiv.org/abs/2604.08224)、[Cost-Sensitive Store Routing](https://arxiv.org/abs/2603.15658)、[Compute Allocation for Reasoning-Intensive Retrieval Agents](https://openreview.net/forum?id=nqr4eTODKl) 和 [RecoAtlas](https://arxiv.org/abs/2605.18805) 启发了按失败原因过滤、来源可见、预算可控、可解释、带效用门控的 experience replay。
 - [PROV-AGENT](https://arxiv.org/abs/2508.02866) 与 [LLM Agents for Interactive Workflow Provenance](https://arxiv.org/abs/2509.13978) 支撑了 task-derived memory source metadata 这类轻量 agentic-workflow provenance 设计。
-- [Securing LLM-Agent Long-Term Memory Against Poisoning](https://arxiv.org/abs/2606.24322) 和 [From Untrusted Input to Trusted Memory](https://arxiv.org/abs/2606.04329) 提醒了相邻的 origin-bound authority 与 memory write-channel 风险，这是后续 memory security 工作需要处理的边界。
+- [Securing LLM-Agent Long-Term Memory Against Poisoning](https://arxiv.org/abs/2606.24322) 和 [From Untrusted Input to Trusted Memory](https://arxiv.org/abs/2606.04329) / [OpenReview](https://openreview.net/forum?id=5cgg9yenCZ) 支撑了写入时 trust metadata 和自动注入 trusted-only gate，用来开始处理 memory write-channel 风险。
 - [kunchenguid/no-mistakes](https://github.com/kunchenguid/no-mistakes) 与 [lavish-axi](https://github.com/kunchenguid/lavish-axi) 启发了 loop-state 和 docs-drift 思路。
 - [merkyor/Lynn](https://gitee.com/merkyor/Lynn) 启发了编排器侧 ownership enforcement。
 - Anthropic 官方 `skill-creator` meta-skill 支撑了 skill authoring 和 validation flow。
