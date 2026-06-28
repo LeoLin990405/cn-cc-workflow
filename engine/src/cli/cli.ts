@@ -13,6 +13,7 @@ import { DispatchCommand } from './commands/dispatch.js';
 import { DoctorCommand } from './commands/doctor.js';
 import {
   ExperienceAddCommand,
+  ExperienceEvalCommand,
   ExperienceLearnCommand,
   ExperienceListCommand,
   ExperienceRecallCommand,
@@ -60,6 +61,7 @@ export const buildCli = (): Cli => {
   cli.register(DispatchCommand);
   cli.register(FleetCommand);
   cli.register(ExperienceAddCommand);
+  cli.register(ExperienceEvalCommand);
   cli.register(ExperienceLearnCommand);
   cli.register(ExperienceListCommand);
   cli.register(ExperienceRecallCommand);

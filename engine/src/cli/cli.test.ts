@@ -1919,6 +1919,213 @@ describe('fugue CLI', () => {
       expect(metadataOnly.out).not.toContain('Use dispatch provenance anchors.');
     });
 
+    it('evaluates recall cases as machine-readable precision metrics', async () => {
+      await mkdir(join(store, 'code'), { recursive: true });
+      await writeFile(
+        join(store, 'code', 'dispatch-note.md'),
+        [
+          '---',
+          'workspace: code',
+          'title: Dispatch note',
+          'created: 200',
+          'sourceKind: manual',
+          'trustKind: trusted',
+          '---',
+          'Use dispatch provenance anchors for durable outputs.',
+        ].join('\n'),
+        'utf8',
+      );
+      await writeFile(
+        join(store, 'code', 'other-note.md'),
+        [
+          '---',
+          'workspace: code',
+          'title: Other note',
+          'created: 100',
+          'sourceKind: manual',
+          'trustKind: trusted',
+          '---',
+          'Keep unrelated checklist notes separate.',
+        ].join('\n'),
+        'utf8',
+      );
+      const casesPath = join(store, 'cases.json');
+      await writeFile(
+        casesPath,
+        JSON.stringify([
+          {
+            id: 'exact',
+            query: 'dispatch provenance',
+            expectedSlugs: ['dispatch-note'],
+            limit: 2,
+            minScore: 2,
+          },
+          {
+            id: 'miss',
+            query: 'unmatched query',
+            expectedSlugs: ['dispatch-note'],
+            limit: 2,
+          },
+        ]),
+        'utf8',
+      );
+      const jsonlPath = join(store, 'cases.jsonl');
+      await writeFile(
+        jsonlPath,
+        `${JSON.stringify({
+          id: 'jsonl',
+          query: 'dispatch provenance',
+          expectedSlugs: ['dispatch-note'],
+          limit: 1,
+        })}\n`,
+        'utf8',
+      );
+      const invalidPath = join(store, 'invalid-cases.json');
+      await writeFile(
+        invalidPath,
+        JSON.stringify([{ query: 'dispatch', expectedSlugs: [1] }]),
+        'utf8',
+      );
+      const hugeAgePath = join(store, 'huge-age-cases.json');
+      await writeFile(
+        hugeAgePath,
+        JSON.stringify([
+          {
+            query: 'dispatch',
+            expectedSlugs: ['dispatch-note'],
+            maxAgeDays: Number.MAX_SAFE_INTEGER,
+          },
+        ]),
+        'utf8',
+      );
+
+      const evalRun = await run([
+        'experience',
+        'eval',
+        '--store',
+        store,
+        'code',
+        '--cases',
+        casesPath,
+        '--json',
+      ]);
+      const jsonlRun = await run([
+        'experience',
+        'eval',
+        '--store',
+        store,
+        'code',
+        '--cases',
+        jsonlPath,
+        '--json',
+      ]);
+      const noJson = await run([
+        'experience',
+        'eval',
+        '--store',
+        store,
+        'code',
+        '--cases',
+        casesPath,
+      ]);
+      const invalid = await run([
+        'experience',
+        'eval',
+        '--store',
+        store,
+        'code',
+        '--cases',
+        invalidPath,
+        '--json',
+      ]);
+      const hugeAge = await run([
+        'experience',
+        'eval',
+        '--store',
+        store,
+        'code',
+        '--cases',
+        hugeAgePath,
+        '--json',
+      ]);
+      type EvalSummary = {
+        readonly workspace: string;
+        readonly caseCount: number;
+        readonly passed: number;
+        readonly failed: number;
+        readonly meanPrecision: number;
+        readonly meanRecall: number;
+        readonly meanF1: number;
+        readonly hitRate: number;
+        readonly meanMrr: number;
+        readonly cases: ReadonlyArray<{
+          readonly id: string;
+          readonly query: string;
+          readonly expectedSlugs: readonly string[];
+          readonly retrievedSlugs: readonly string[];
+          readonly relevantRetrieved: readonly string[];
+          readonly precision: number;
+          readonly recall: number;
+          readonly f1: number;
+          readonly hit: boolean;
+          readonly mrr: number;
+          readonly passed: boolean;
+        }>;
+      };
+      const summary = JSON.parse(evalRun.out) as EvalSummary;
+      const jsonlSummary = JSON.parse(jsonlRun.out) as EvalSummary;
+
+      expect(evalRun.code).toBe(0);
+      expect(summary).toEqual({
+        workspace: 'code',
+        caseCount: 2,
+        passed: 1,
+        failed: 1,
+        meanPrecision: 0.5,
+        meanRecall: 0.5,
+        meanF1: 0.5,
+        hitRate: 0.5,
+        meanMrr: 0.5,
+        cases: [
+          {
+            id: 'exact',
+            query: 'dispatch provenance',
+            expectedSlugs: ['dispatch-note'],
+            retrievedSlugs: ['dispatch-note'],
+            relevantRetrieved: ['dispatch-note'],
+            precision: 1,
+            recall: 1,
+            f1: 1,
+            hit: true,
+            mrr: 1,
+            passed: true,
+          },
+          {
+            id: 'miss',
+            query: 'unmatched query',
+            expectedSlugs: ['dispatch-note'],
+            retrievedSlugs: [],
+            relevantRetrieved: [],
+            precision: 0,
+            recall: 0,
+            f1: 0,
+            hit: false,
+            mrr: 0,
+            passed: false,
+          },
+        ],
+      });
+      expect(jsonlRun.code).toBe(0);
+      expect(jsonlSummary.cases[0]?.id).toBe('jsonl');
+      expect(jsonlSummary.cases[0]?.retrievedSlugs).toEqual(['dispatch-note']);
+      expect(noJson.code).toBe(1);
+      expect(noJson.err).toContain('experience eval currently requires --json');
+      expect(invalid.code).toBe(1);
+      expect(invalid.err).toContain('expectedSlugs must be a non-empty string array');
+      expect(hugeAge.code).toBe(1);
+      expect(hugeAge.err).toContain('maxAgeDays is too large');
+    });
+
     it('marks superseded experience and hides it from recall by default', async () => {
       await run(['experience', 'add', '--store', store, 'code', 'old route'], {
         stdin: Readable.from(['Use the old dispatch route with obsolete evidence.']),

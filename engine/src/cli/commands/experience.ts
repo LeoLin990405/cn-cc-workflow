@@ -147,6 +147,24 @@ const parseMaxAgeDays = (raw: string | undefined): number | null | undefined => 
   return Number.isSafeInteger(seconds) ? seconds : null;
 };
 
+const parsePositiveIntegerValue = (value: unknown): number | null | undefined => {
+  if (value === undefined) return undefined;
+  return Number.isInteger(value) && typeof value === 'number' && value > 0 ? value : null;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+type JsonParseResult = { readonly ok: true; readonly value: unknown } | { readonly ok: false };
+
+const parseJsonUnknown = (content: string): JsonParseResult => {
+  try {
+    return { ok: true, value: JSON.parse(content) as unknown };
+  } catch {
+    return { ok: false };
+  }
+};
+
 const field = (content: string, key: string): string => {
   const prefix = `${key}:`;
   const line = content.split(/\r?\n/u).find((entry) => entry.startsWith(prefix));
@@ -269,6 +287,216 @@ const trustKindError = (trustKind: string | undefined): string => {
 const trustFilterError = (trustFilter: string | undefined): string => {
   const rendered = trustFilter === undefined || trustFilter.length === 0 ? '<empty>' : trustFilter;
   return `unknown --trust ${rendered}; expected one of ${EXPERIENCE_TRUST_FILTERS.join(', ')}\n`;
+};
+
+interface ExperienceEvalCase {
+  readonly id: string;
+  readonly query: string;
+  readonly expectedSlugs: readonly string[];
+  readonly limit?: number;
+  readonly minScore?: number;
+  readonly failureCause?: FailureCause;
+  readonly sourceKind?: ExperienceSourceKind;
+  readonly sourceRef?: string;
+  readonly trust?: ExperienceTrustFilter;
+  readonly maxAgeSeconds?: number;
+  readonly includeSuperseded?: boolean;
+}
+
+interface ExperienceEvalCaseResult {
+  readonly id: string;
+  readonly query: string;
+  readonly expectedSlugs: readonly string[];
+  readonly retrievedSlugs: readonly string[];
+  readonly relevantRetrieved: readonly string[];
+  readonly precision: number;
+  readonly recall: number;
+  readonly f1: number;
+  readonly hit: boolean;
+  readonly mrr: number;
+  readonly passed: boolean;
+}
+
+interface ExperienceEvalSummary {
+  readonly workspace: string;
+  readonly caseCount: number;
+  readonly passed: number;
+  readonly failed: number;
+  readonly meanPrecision: number;
+  readonly meanRecall: number;
+  readonly meanF1: number;
+  readonly hitRate: number;
+  readonly meanMrr: number;
+  readonly cases: readonly ExperienceEvalCaseResult[];
+}
+
+const parseStringList = (value: unknown): readonly string[] | null => {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const values = value.map((entry) => (typeof entry === 'string' ? entry.trim() : ''));
+  return values.every((entry) => entry.length > 0) ? [...new Set(values)] : null;
+};
+
+const parseEvalCase = (value: unknown, index: number): ExperienceEvalCase | string => {
+  if (!isRecord(value)) return `case ${index + 1} must be an object`;
+  const idValue = value.id;
+  if (idValue !== undefined && (typeof idValue !== 'string' || idValue.trim().length === 0)) {
+    return `case ${index + 1} id must be a non-empty string`;
+  }
+  const queryValue = value.query;
+  if (typeof queryValue !== 'string' || queryValue.trim().length === 0) {
+    return `case ${index + 1} query must be a non-empty string`;
+  }
+  const expectedSlugs = parseStringList(value.expectedSlugs);
+  if (expectedSlugs === null) {
+    return `case ${index + 1} expectedSlugs must be a non-empty string array`;
+  }
+  const limit = parsePositiveIntegerValue(value.limit);
+  if (limit === null) return `case ${index + 1} limit must be a positive integer`;
+  const minScore = parsePositiveIntegerValue(value.minScore);
+  if (minScore === null) return `case ${index + 1} minScore must be a positive integer`;
+  const maxAgeDays = parsePositiveIntegerValue(value.maxAgeDays);
+  if (maxAgeDays === null) return `case ${index + 1} maxAgeDays must be a positive integer`;
+  const maxAgeSeconds = maxAgeDays === undefined ? undefined : maxAgeDays * 86_400;
+  if (maxAgeSeconds !== undefined && !Number.isSafeInteger(maxAgeSeconds)) {
+    return `case ${index + 1} maxAgeDays is too large`;
+  }
+  const failureCause = normalizeFailureCause(
+    typeof value.failureCause === 'string' ? value.failureCause : undefined,
+  );
+  if (
+    value.failureCause !== undefined &&
+    (failureCause === undefined || !isFailureCause(failureCause))
+  ) {
+    return `case ${index + 1} failureCause must be one of ${FAILURE_CAUSES.join(', ')}`;
+  }
+  const sourceKind = normalizeSourceKind(
+    typeof value.source === 'string' ? value.source : undefined,
+  );
+  if (
+    value.source !== undefined &&
+    (sourceKind === undefined || !isExperienceSourceKind(sourceKind))
+  ) {
+    return `case ${index + 1} source must be one of ${EXPERIENCE_SOURCE_KINDS.join(', ')}`;
+  }
+  const sourceRef = typeof value.sourceRef === 'string' ? value.sourceRef.trim() : undefined;
+  if (value.sourceRef !== undefined && (sourceRef === undefined || sourceRef.length === 0)) {
+    return `case ${index + 1} sourceRef must be a non-empty string`;
+  }
+  const trust = normalizeTrustKind(typeof value.trust === 'string' ? value.trust : undefined);
+  if (value.trust !== undefined && (trust === undefined || !isExperienceTrustFilter(trust))) {
+    return `case ${index + 1} trust must be one of ${EXPERIENCE_TRUST_FILTERS.join(', ')}`;
+  }
+  if (value.includeSuperseded !== undefined && typeof value.includeSuperseded !== 'boolean') {
+    return `case ${index + 1} includeSuperseded must be a boolean`;
+  }
+  return {
+    id: idValue === undefined ? `case-${index + 1}` : idValue.trim(),
+    query: queryValue,
+    expectedSlugs,
+    ...(limit === undefined ? {} : { limit }),
+    ...(minScore === undefined ? {} : { minScore }),
+    ...(failureCause !== undefined && isFailureCause(failureCause) ? { failureCause } : {}),
+    ...(sourceKind !== undefined && isExperienceSourceKind(sourceKind) ? { sourceKind } : {}),
+    ...(sourceRef === undefined ? {} : { sourceRef }),
+    ...(trust !== undefined && isExperienceTrustFilter(trust) ? { trust } : {}),
+    ...(maxAgeSeconds === undefined ? {} : { maxAgeSeconds }),
+    ...(value.includeSuperseded === undefined
+      ? {}
+      : { includeSuperseded: value.includeSuperseded }),
+  };
+};
+
+const parseEvalCases = (content: string): readonly ExperienceEvalCase[] | string => {
+  const trimmed = content.trim();
+  if (trimmed.length === 0) return 'cases file is empty';
+  const parsed: unknown[] = [];
+  if (trimmed.startsWith('[')) {
+    const result = parseJsonUnknown(trimmed);
+    if (!result.ok) return 'cases file is not valid JSON or JSONL';
+    if (!Array.isArray(result.value)) return 'cases file must be a JSON array or JSONL records';
+    const values: readonly unknown[] = result.value;
+    for (const value of values) parsed.push(value);
+  } else {
+    const lines = trimmed.split(/\r?\n/u).filter((line) => line.trim().length > 0);
+    for (const [index, line] of lines.entries()) {
+      const result = parseJsonUnknown(line);
+      if (!result.ok) return `case ${index + 1} is not valid JSON`;
+      parsed.push(result.value);
+    }
+  }
+  const cases: ExperienceEvalCase[] = [];
+  for (const [index, value] of parsed.entries()) {
+    const parsedCase = parseEvalCase(value, index);
+    if (typeof parsedCase === 'string') return parsedCase;
+    cases.push(parsedCase);
+  }
+  return cases.length === 0 ? 'cases file has no cases' : cases;
+};
+
+const evalCaseOptions = (evalCase: ExperienceEvalCase): RecallOptions => ({
+  query: evalCase.query,
+  ...(evalCase.limit === undefined ? {} : { limit: evalCase.limit }),
+  ...(evalCase.minScore === undefined ? {} : { minScore: evalCase.minScore }),
+  ...(evalCase.failureCause === undefined ? {} : { failureCause: evalCase.failureCause }),
+  ...(evalCase.sourceKind === undefined ? {} : { sourceKind: evalCase.sourceKind }),
+  ...(evalCase.sourceRef === undefined ? {} : { sourceRef: evalCase.sourceRef }),
+  ...(evalCase.trust === undefined ? {} : { trust: evalCase.trust }),
+  ...(evalCase.maxAgeSeconds === undefined ? {} : { maxAgeSeconds: evalCase.maxAgeSeconds }),
+  ...(evalCase.includeSuperseded === undefined
+    ? {}
+    : { includeSuperseded: evalCase.includeSuperseded }),
+});
+
+const roundMetric = (value: number): number => Number(value.toFixed(6));
+
+const evalCaseResult = (
+  evalCase: ExperienceEvalCase,
+  methods: readonly Method[],
+): ExperienceEvalCaseResult => {
+  const expected = new Set(evalCase.expectedSlugs);
+  const retrievedSlugs = methods.map((method) => method.slug);
+  const relevantRetrieved = retrievedSlugs.filter((slug) => expected.has(slug));
+  const precision =
+    retrievedSlugs.length === 0 ? 0 : relevantRetrieved.length / retrievedSlugs.length;
+  const recall = relevantRetrieved.length / expected.size;
+  const f1 = precision + recall === 0 ? 0 : (2 * precision * recall) / (precision + recall);
+  const firstRelevantIndex = retrievedSlugs.findIndex((slug) => expected.has(slug));
+  const mrr = firstRelevantIndex === -1 ? 0 : 1 / (firstRelevantIndex + 1);
+  return {
+    id: evalCase.id,
+    query: evalCase.query,
+    expectedSlugs: evalCase.expectedSlugs,
+    retrievedSlugs,
+    relevantRetrieved,
+    precision: roundMetric(precision),
+    recall: roundMetric(recall),
+    f1: roundMetric(f1),
+    hit: relevantRetrieved.length > 0,
+    mrr: roundMetric(mrr),
+    passed: precision === 1 && recall === 1,
+  };
+};
+
+const mean = (values: readonly number[]): number =>
+  values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
+
+const evalSummary = (
+  workspace: string,
+  cases: readonly ExperienceEvalCaseResult[],
+): ExperienceEvalSummary => {
+  const passed = cases.filter((entry) => entry.passed).length;
+  return {
+    workspace,
+    caseCount: cases.length,
+    passed,
+    failed: cases.length - passed,
+    meanPrecision: roundMetric(mean(cases.map((entry) => entry.precision))),
+    meanRecall: roundMetric(mean(cases.map((entry) => entry.recall))),
+    meanF1: roundMetric(mean(cases.map((entry) => entry.f1))),
+    hitRate: roundMetric(mean(cases.map((entry) => (entry.hit ? 1 : 0)))),
+    meanMrr: roundMetric(mean(cases.map((entry) => entry.mrr))),
+    cases,
+  };
 };
 
 abstract class ExperienceCommand extends Command {
@@ -565,6 +793,43 @@ export class ExperienceRecallCommand extends ExperienceCommand {
       }
       this.context.stdout.write(renderRecall(method.title, method.body));
     }
+    return 0;
+  }
+}
+
+export class ExperienceEvalCommand extends ExperienceCommand {
+  static override paths = [['experience', 'eval']];
+
+  workspace = Option.String();
+  casesPath = Option.String('--cases');
+  json = Option.Boolean('--json', false);
+
+  override async execute(): Promise<number> {
+    if (this.casesPath === undefined || this.casesPath.trim().length === 0) {
+      this.context.stderr.write('need --cases <file>\n');
+      return 1;
+    }
+    if (!this.json) {
+      this.context.stderr.write('experience eval currently requires --json\n');
+      return 1;
+    }
+    const content = await fs().read(this.casesPath);
+    if (content === null) {
+      this.context.stderr.write(`no --cases file ${this.casesPath}\n`);
+      return 1;
+    }
+    const cases = parseEvalCases(content);
+    if (typeof cases === 'string') {
+      this.context.stderr.write(`invalid --cases: ${cases}\n`);
+      return 1;
+    }
+    const results: ExperienceEvalCaseResult[] = [];
+    const store = this.experienceStore();
+    for (const evalCase of cases) {
+      const methods = await store.recall(this.workspace, evalCaseOptions(evalCase));
+      results.push(evalCaseResult(evalCase, methods));
+    }
+    this.context.stdout.write(`${JSON.stringify(evalSummary(this.workspace, results), null, 2)}\n`);
     return 0;
   }
 }
