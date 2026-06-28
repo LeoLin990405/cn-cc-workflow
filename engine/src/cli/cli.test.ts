@@ -1381,6 +1381,44 @@ describe('fugue CLI', () => {
       expect(trustWithoutWorkspace.err).toContain('--experience-trust requires --workspace');
     });
 
+    it('hides superseded dispatch workspace experience before automatic injection', async () => {
+      await mkdir(join(experience, 'code'), { recursive: true });
+      await writeFile(
+        join(experience, 'code', 'old-redis-route.md'),
+        [
+          '---',
+          'workspace: code',
+          'title: Old redis route',
+          'created: 2',
+          '---',
+          'Old redis route with obsolete evidence.',
+        ].join('\n'),
+        'utf8',
+      );
+      await writeFile(
+        join(experience, 'code', 'new-redis-route.md'),
+        [
+          '---',
+          'workspace: code',
+          'title: New redis route',
+          'created: 3',
+          'supersedes: old-redis-route',
+          '---',
+          'New redis route.',
+        ].join('\n'),
+        'utf8',
+      );
+
+      const dispatched = await run(
+        args('cc-x', '--workspace', 'code', '--prompt', 'fix redis route obsolete evidence'),
+      );
+      const called = await readFile(fugueCcCalled, 'utf8');
+
+      expect(dispatched.code).toBe(0);
+      expect(called).toContain('[experience] New redis route');
+      expect(called).not.toContain('[experience] Old redis route');
+    });
+
     it('rejects invalid harnesses and missing prompt sources', async () => {
       const unknownHarness = await run(
         args('cc-x', '--harness', 'bogus', '--prompt-file', promptFile),
@@ -1730,6 +1768,57 @@ describe('fugue CLI', () => {
       expect(secretRef.err).toContain('sourceRef contains a suspected key');
     });
 
+    it('marks superseded experience and hides it from recall by default', async () => {
+      await run(['experience', 'add', '--store', store, 'code', 'old route'], {
+        stdin: Readable.from(['Use the old dispatch route with obsolete evidence.']),
+      });
+      const addNew = await run(
+        ['experience', 'add', '--store', store, 'code', 'new route', '--supersedes', 'old-route'],
+        {
+          stdin: Readable.from(['Use the new dispatch route.']),
+        },
+      );
+      const show = await run(['experience', 'show', '--store', store, 'code', 'new-route']);
+      const defaultRecall = await run([
+        'experience',
+        'recall',
+        '--store',
+        store,
+        'code',
+        '--query',
+        'dispatch route obsolete evidence',
+        '--explain',
+      ]);
+      const auditRecall = await run([
+        'experience',
+        'recall',
+        '--store',
+        store,
+        'code',
+        '--query',
+        'dispatch route obsolete evidence',
+        '--include-superseded',
+        '--explain',
+      ]);
+      const blankSupersedes = await run(
+        ['experience', 'add', '--store', store, 'code', 'blank supersedes', '--supersedes', '   '],
+        {
+          stdin: Readable.from(['blank supersedes body']),
+        },
+      );
+
+      expect(addNew.code).toBe(0);
+      expect(show.out).toContain('supersedes: old-route');
+      expect(defaultRecall.out).toContain('supersededFilter=hide');
+      expect(defaultRecall.out).toContain('[experience] new route');
+      expect(defaultRecall.out).not.toContain('[experience] old route');
+      expect(auditRecall.out).toContain('supersededFilter=include');
+      expect(auditRecall.out).toContain('[experience] old route');
+      expect(auditRecall.out).toContain('[experience] new route');
+      expect(blankSupersedes.code).toBe(1);
+      expect(blankSupersedes.err).toContain('--supersedes must be a non-empty slug');
+    });
+
     it('learns a reusable experience from a completed task audit', async () => {
       const task = join(dir, 'TASK.md');
       await writeFile(
@@ -1766,6 +1855,8 @@ describe('fugue CLI', () => {
         'dispatch obs boundary',
         '--task',
         task,
+        '--supersedes',
+        'previous-observation',
       ]);
       const show = await run([
         'experience',
@@ -1781,6 +1872,7 @@ describe('fugue CLI', () => {
       expect(learned.out).toContain('dispatch-obs-boundary.md');
       expect(show.out).toContain('sourceKind: task');
       expect(show.out).toContain(`sourceRef: ${task}`);
+      expect(show.out).toContain('supersedes: previous-observation');
       expect(recalled.out).toContain('[experience] dispatch obs boundary');
       expect(recalled.out).toContain(`Source task: ${task}`);
       expect(recalled.out).toContain('Keep model stdout clean');
@@ -5473,6 +5565,50 @@ describe('fugue CLI', () => {
       expect(badLimit.err).toContain('unknown --experience-limit not-a-number');
       expect(badTrust.code).toBe(2);
       expect(badTrust.err).toContain('unknown --experience-trust untrusted');
+    });
+
+    it('hides superseded workspace context experience before query ranking', async () => {
+      await writeFile(
+        join(experience, 'code', 'old-redis-route.md'),
+        [
+          '---',
+          'workspace: code',
+          'title: Old redis route',
+          'created: 2',
+          '---',
+          'Old redis route with obsolete evidence.',
+        ].join('\n'),
+        'utf8',
+      );
+      await writeFile(
+        join(experience, 'code', 'new-redis-route.md'),
+        [
+          '---',
+          'workspace: code',
+          'title: New redis route',
+          'created: 3',
+          'supersedes: old-redis-route',
+          '---',
+          'New redis route.',
+        ].join('\n'),
+        'utf8',
+      );
+
+      const context = await run([
+        'workspace',
+        'context',
+        ...wsArgs(),
+        ...modelArgs(),
+        '--experience',
+        experience,
+        'code',
+        '--task',
+        'fix redis route obsolete evidence',
+      ]);
+
+      expect(context.code).toBe(0);
+      expect(context.out).toContain('[experience] New redis route');
+      expect(context.out).not.toContain('[experience] Old redis route');
     });
   });
 

@@ -165,4 +165,22 @@ describe('explainRecallMatch', () => {
       maxAgeSeconds: 86_400,
     });
   });
+
+  it('includes the active superseded audit mode when provided', () => {
+    const explanation = explainRecallMatch(
+      {
+        title: 'fresh route',
+        body: 'Prefer corrected routing lessons.',
+      },
+      { query: 'corrected routing', includeSuperseded: true },
+    );
+
+    expect(explanation).toEqual({
+      score: 2,
+      matchedTerms: ['corrected', 'routing'],
+      sourceKind: 'manual',
+      trustKind: 'trusted',
+      includeSuperseded: true,
+    });
+  });
 });

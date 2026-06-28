@@ -10,6 +10,7 @@ export interface Method {
   readonly sourceKind: ExperienceSourceKind;
   readonly sourceRef?: string;
   readonly trustKind: ExperienceTrustKind;
+  readonly supersedes?: readonly string[];
   readonly body: string;
 }
 
@@ -19,6 +20,7 @@ export interface AddMethod {
   readonly sourceKind?: ExperienceSourceKind;
   readonly sourceRef?: string;
   readonly trustKind?: ExperienceTrustKind;
+  readonly supersedes?: readonly string[];
   readonly body: string;
 }
 
@@ -126,6 +128,7 @@ export interface RecallMatchExplanation {
   readonly sourceRefFilter?: string;
   readonly trustFilter?: ExperienceTrustFilter;
   readonly maxAgeSeconds?: number;
+  readonly includeSuperseded?: boolean;
 }
 
 export const explainRecallMatch = (
@@ -152,6 +155,9 @@ export const explainRecallMatch = (
     ...(options.sourceRef === undefined ? {} : { sourceRefFilter: options.sourceRef }),
     ...(options.trust === undefined ? {} : { trustFilter: options.trust }),
     ...(options.maxAgeSeconds === undefined ? {} : { maxAgeSeconds: options.maxAgeSeconds }),
+    ...(options.includeSuperseded === undefined
+      ? {}
+      : { includeSuperseded: options.includeSuperseded }),
   };
 };
 
@@ -171,4 +177,5 @@ export interface RecallOptions {
   readonly sourceRef?: string;
   readonly trust?: ExperienceTrustFilter;
   readonly maxAgeSeconds?: number;
+  readonly includeSuperseded?: boolean;
 }

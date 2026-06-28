@@ -50,13 +50,14 @@ const renderRecallExplanation = (
   const sourceFilter = explanation.sourceFilter ?? '-';
   const sourceRefFilter = explanation.sourceRefFilter ?? '-';
   const trustFilter = explanation.trustFilter ?? '-';
+  const supersededFilter = explanation.includeSuperseded === true ? 'include' : 'hide';
   const maxAgeDays =
     explanation.maxAgeSeconds === undefined ? '-' : String(explanation.maxAgeSeconds / 86_400);
   const source =
     explanation.sourceRef === undefined
       ? explanation.sourceKind
       : `${explanation.sourceKind}:${explanation.sourceRef}`;
-  return `[experience:explain] score=${explanation.score} minScore=${minScore} maxAgeDays=${maxAgeDays} matched=${matched} failureCause=${failureCause} filter=${filter} sourceFilter=${sourceFilter} sourceRefFilter=${sourceRefFilter} trustFilter=${trustFilter} source=${source} trust=${explanation.trustKind}\n`;
+  return `[experience:explain] score=${explanation.score} minScore=${minScore} maxAgeDays=${maxAgeDays} matched=${matched} failureCause=${failureCause} filter=${filter} sourceFilter=${sourceFilter} sourceRefFilter=${sourceRefFilter} trustFilter=${trustFilter} supersededFilter=${supersededFilter} source=${source} trust=${explanation.trustKind}\n`;
 };
 
 const parseLimit = (raw: string): number => {
@@ -176,6 +177,23 @@ const sourceKindError = (sourceKind: string | undefined): string => {
 
 const sourceRefError = (): string => '--source-ref must be a non-empty string\n';
 
+const singleLine = (value: string): string => value.replace(/[\r\n]+/gu, ' ').trim();
+
+const parseSupersedes = (raw: readonly string[]): readonly string[] | null => {
+  const slugs: string[] = [];
+  for (const value of raw) {
+    const parts = singleLine(value)
+      .split(',')
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+    if (parts.length === 0) return null;
+    slugs.push(...parts);
+  }
+  return [...new Set(slugs)];
+};
+
+const supersedesError = (): string => '--supersedes must be a non-empty slug\n';
+
 const normalizeTrustKind = (raw: string | undefined): string | undefined =>
   raw?.trim().toLowerCase();
 
@@ -205,6 +223,7 @@ export class ExperienceAddCommand extends ExperienceCommand {
   from = Option.String('--from');
   trustKind = Option.String('--trust');
   sourceRef = Option.String('--source-ref');
+  supersedes = Option.Array('--supersedes', []);
 
   override async execute(): Promise<number> {
     const trustKind = normalizeTrustKind(this.trustKind);
@@ -219,6 +238,11 @@ export class ExperienceAddCommand extends ExperienceCommand {
       this.context.stderr.write(sourceRefError());
       return 1;
     }
+    const supersedes = parseSupersedes(this.supersedes);
+    if (supersedes === null) {
+      this.context.stderr.write(supersedesError());
+      return 1;
+    }
     const body =
       this.from === undefined ? await readStream(this.context.stdin) : await fs().read(this.from);
     if (body === null) {
@@ -231,6 +255,7 @@ export class ExperienceAddCommand extends ExperienceCommand {
       sourceKind: 'manual',
       ...(sourceRef === undefined ? {} : { sourceRef }),
       ...(trustKind !== undefined && isExperienceTrustKind(trustKind) ? { trustKind } : {}),
+      ...(supersedes.length === 0 ? {} : { supersedes }),
       body,
     });
     if (!isOk(result)) {
@@ -253,6 +278,7 @@ export class ExperienceLearnCommand extends ExperienceCommand {
   allowFailure = Option.Boolean('--allow-failure', false);
   lesson = Option.String('--lesson');
   failureCause = Option.String('--failure-cause');
+  supersedes = Option.Array('--supersedes', []);
 
   override async execute(): Promise<number> {
     if (this.task === undefined || this.task.length === 0) {
@@ -265,6 +291,11 @@ export class ExperienceLearnCommand extends ExperienceCommand {
       return 1;
     }
     const completed = isCompletedTask(content);
+    const supersedes = parseSupersedes(this.supersedes);
+    if (supersedes === null) {
+      this.context.stderr.write(supersedesError());
+      return 1;
+    }
     const lesson = this.lesson?.trim();
     const failureCauseProvided = this.failureCause !== undefined;
     const failureCause = normalizeFailureCause(this.failureCause);
@@ -325,6 +356,7 @@ export class ExperienceLearnCommand extends ExperienceCommand {
       title: this.title,
       sourceKind: 'task',
       sourceRef: this.task,
+      ...(supersedes.length === 0 ? {} : { supersedes }),
       body,
     });
     if (!isOk(result)) {
@@ -367,6 +399,7 @@ export class ExperienceRecallCommand extends ExperienceCommand {
   trust = Option.String('--trust');
   minScore = Option.String('--min-score');
   maxAgeDays = Option.String('--max-age-days');
+  includeSuperseded = Option.Boolean('--include-superseded', false);
   explain = Option.Boolean('--explain', false);
 
   override async execute(): Promise<number> {
@@ -445,6 +478,9 @@ export class ExperienceRecallCommand extends ExperienceCommand {
     }
     if (maxAgeSeconds !== undefined) {
       options = { ...options, maxAgeSeconds };
+    }
+    if (this.includeSuperseded) {
+      options = { ...options, includeSuperseded: true };
     }
     const methods = await this.experienceStore().recall(this.workspace, options);
     for (const method of methods) {

@@ -46,6 +46,7 @@ describe('FsExperienceStore', () => {
       sourceKind: 'task',
       sourceRef: '/tmp/TASK.md',
       trustKind: 'untrusted',
+      supersedes: ['old-route', 'older-route'],
       body: 'learned from a completed task',
     });
     await fs.write(
@@ -61,6 +62,7 @@ describe('FsExperienceStore', () => {
       sourceKind: 'task',
       sourceRef: '/tmp/TASK.md',
       trustKind: 'untrusted',
+      supersedes: ['old-route', 'older-route'],
       body: 'learned from a completed task',
     });
     expect(await store.get('code', 'old')).toEqual({
@@ -125,6 +127,25 @@ describe('FsExperienceStore', () => {
     expect(raw).not.toContain('\r');
   });
 
+  it('keeps superseded slugs on one normalized frontmatter line', async () => {
+    const clock = fakeClock(5_000);
+    const fs = new MemoryFileSystem(clock);
+    const store = new FsExperienceStore(fs, clock, '/exp');
+    await store.add({
+      workspace: 'code',
+      title: 'task retro',
+      supersedes: ['old-route\rinjected: nope', 'older-route, oldest-route', 'old-route'],
+      body: 'learned from a completed task',
+    });
+
+    const raw = await fs.read('/exp/code/task-retro.md');
+    expect(raw).toContain(
+      'supersedes: old-route injected: nope, older-route, oldest-route, old-route\n',
+    );
+    expect(raw).not.toContain('\ninjected: nope\n');
+    expect(raw).not.toContain('\r');
+  });
+
   it('rejects a body containing a suspected key (redaction gate)', async () => {
     const result = await make(fakeClock(0)).add({
       workspace: 'code',
@@ -139,6 +160,16 @@ describe('FsExperienceStore', () => {
       workspace: 'code',
       title: 'leaky source ref',
       sourceRef: `https://example.test/?token=sk-${'abcdefghijklmnopqrstuvwxyz'}`,
+      body: 'safe body',
+    });
+    expect(isErr(result) && result.error.kind).toBe('contains-secret');
+  });
+
+  it('rejects a supersedes slug containing a suspected key', async () => {
+    const result = await make(fakeClock(0)).add({
+      workspace: 'code',
+      title: 'leaky supersedes',
+      supersedes: [`sk-${'abcdefghijklmnopqrstuvwxyz'}`],
       body: 'safe body',
     });
     expect(isErr(result) && result.error.kind).toBe('contains-secret');
@@ -275,6 +306,77 @@ describe('FsExperienceStore', () => {
     });
 
     expect(recalled.map((m) => m.title)).toEqual(['new imported dispatch output']);
+  });
+
+  it('recall hides superseded methods by default before query ranking', async () => {
+    const clock = fakeClock(1_000);
+    const store = make(clock);
+    await store.add({
+      workspace: 'code',
+      title: 'old dispatch route',
+      body: 'Old dispatch route with extra obsolete evidence.',
+    });
+    clock.set(2_000);
+    await store.add({
+      workspace: 'code',
+      title: 'new dispatch route',
+      supersedes: ['old-dispatch-route'],
+      body: 'New dispatch route.',
+    });
+
+    const defaultRecall = await store.recall('code', {
+      query: 'dispatch route obsolete evidence',
+      limit: 3,
+    });
+    const auditRecall = await store.recall('code', {
+      query: 'dispatch route obsolete evidence',
+      includeSuperseded: true,
+      limit: 3,
+    });
+
+    expect(defaultRecall.map((m) => m.title)).toEqual(['new dispatch route']);
+    expect(auditRecall.map((m) => m.title)).toEqual(['old dispatch route', 'new dispatch route']);
+  });
+
+  it('does not let an untrusted superseding method suppress trusted recall by default', async () => {
+    const clock = fakeClock(1_000);
+    const store = make(clock);
+    await store.add({
+      workspace: 'code',
+      title: 'trusted dispatch route',
+      trustKind: 'trusted',
+      body: 'Trusted dispatch route.',
+    });
+    clock.set(2_000);
+    await store.add({
+      workspace: 'code',
+      title: 'untrusted dispatch route',
+      trustKind: 'untrusted',
+      supersedes: ['trusted-dispatch-route'],
+      body: 'Untrusted dispatch route.',
+    });
+
+    const trustedOnly = await store.recall('code', {
+      query: 'dispatch route',
+      trust: 'trusted',
+      limit: 3,
+    });
+    const defaultRecall = await store.recall('code', {
+      query: 'dispatch route',
+      limit: 3,
+    });
+    const all = await store.recall('code', {
+      query: 'dispatch route',
+      trust: 'all',
+      limit: 3,
+    });
+
+    expect(trustedOnly.map((m) => m.title)).toEqual(['trusted dispatch route']);
+    expect(defaultRecall.map((m) => m.title)).toEqual([
+      'untrusted dispatch route',
+      'trusted dispatch route',
+    ]);
+    expect(all.map((m) => m.title)).toEqual(['untrusted dispatch route']);
   });
 
   it('recall can filter by trust before query ranking', async () => {

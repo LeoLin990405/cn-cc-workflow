@@ -16,6 +16,15 @@ import { joinPath } from '../store/paths.js';
 
 const singleLine = (value: string): string => value.replace(/[\r\n]+/gu, ' ').trim();
 
+const cleanSupersedes = (values: readonly string[] | undefined): readonly string[] => [
+  ...new Set(
+    (values ?? [])
+      .flatMap((value) => singleLine(value).split(','))
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0),
+  ),
+];
+
 const renderMethod = (m: Method): string =>
   [
     '---',
@@ -25,6 +34,9 @@ const renderMethod = (m: Method): string =>
     `sourceKind: ${m.sourceKind}`,
     ...(m.sourceRef === undefined || m.sourceRef.length === 0 ? [] : [`sourceRef: ${m.sourceRef}`]),
     `trustKind: ${m.trustKind}`,
+    ...(m.supersedes === undefined || m.supersedes.length === 0
+      ? []
+      : [`supersedes: ${m.supersedes.join(', ')}`]),
     '---',
     m.body,
     '',
@@ -53,6 +65,7 @@ const parseMethod = (content: string, workspace: string, slug: string): Method =
   const sourceKind = fmField('sourceKind');
   const sourceRef = singleLine(fmField('sourceRef'));
   const trustKind = fmField('trustKind');
+  const supersedes = cleanSupersedes([fmField('supersedes')]);
   const body =
     end !== -1
       ? lines
@@ -68,6 +81,7 @@ const parseMethod = (content: string, workspace: string, slug: string): Method =
     sourceKind: isExperienceSourceKind(sourceKind) ? sourceKind : 'manual',
     ...(sourceRef.length === 0 ? {} : { sourceRef }),
     trustKind: isExperienceTrustKind(trustKind) ? trustKind : 'trusted',
+    ...(supersedes.length === 0 ? {} : { supersedes }),
     body,
   };
 };
@@ -103,6 +117,13 @@ export class FsExperienceStore implements ExperienceStore {
         detail: 'sourceRef contains a suspected key; redact first',
       });
     }
+    const supersedes = cleanSupersedes(input.supersedes);
+    if (supersedes.some((slug) => containsSecret(slug))) {
+      return err({
+        kind: 'contains-secret',
+        detail: 'supersedes contains a suspected key; redact first',
+      });
+    }
     const method: Method = {
       workspace: input.workspace,
       title: input.title,
@@ -111,6 +132,7 @@ export class FsExperienceStore implements ExperienceStore {
       sourceKind: input.sourceKind ?? 'manual',
       ...(sourceRef === undefined || sourceRef.length === 0 ? {} : { sourceRef }),
       trustKind: input.trustKind ?? 'trusted',
+      ...(supersedes.length === 0 ? {} : { supersedes }),
       body: input.body,
     };
     await this.fs.write(this.path(method.workspace, method.slug), renderMethod(method));
@@ -148,6 +170,18 @@ export class FsExperienceStore implements ExperienceStore {
     }
     if (options.failureCause !== undefined) {
       methods = methods.filter((method) => experienceFailureCause(method) === options.failureCause);
+    }
+    if (options.includeSuperseded !== true) {
+      const supersedingMethods =
+        options.trust === undefined
+          ? methods.filter((method) => method.trustKind === 'trusted')
+          : methods;
+      const superseded = new Set(
+        supersedingMethods.flatMap((method) =>
+          (method.supersedes ?? []).filter((slug) => slug !== method.slug),
+        ),
+      );
+      methods = methods.filter((method) => !superseded.has(method.slug));
     }
     const terms = experienceQueryTerms(options.query);
     if (terms.length > 0) {

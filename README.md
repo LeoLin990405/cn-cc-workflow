@@ -220,6 +220,10 @@ operator notes and learned TASK audits default to `trusted`. Add `--explain` to
 recall when you want the audit line that shows score, matched query terms,
 stored failure cause, active cause filter, active source filter, active trust
 filter, active source-ref filter, provenance source, and stored trust.
+When a newer correction replaces an older method, write it with
+`--supersedes <old-slug>`; recall and automatic prompt injection hide superseded
+records by default so stale or conflicting methods are not replayed beside their
+replacement. Manual audit can still inspect them with `--include-superseded`.
 Add `--min-score <n>` with a query when you want a stricter manual recall gate:
 weak one-token matches are dropped from that recall result.
 Add `--max-age-days <n>` when old memories should be treated as stale for this
@@ -243,11 +247,15 @@ cat web-note.md | fuguectl experience add code "browser memory import" \
   --trust untrusted \
   --source-ref https://example.com/original-note
 
+printf "Use the corrected dispatch route." | fuguectl experience add code "new route" \
+  --supersedes old-route
+
 fuguectl experience learn code "failed-query retro" \
   --task TASK.md \
   --allow-failure \
   --lesson "Score relevance on title/body tokens only" \
-  --failure-cause retrieval
+  --failure-cause retrieval \
+  --supersedes old-query-retro
 
 fuguectl experience recall code \
   --failure-cause retrieval \
@@ -257,6 +265,11 @@ fuguectl experience recall code \
   --query "dispatch output" \
   --min-score 2 \
   --max-age-days 30 \
+  --explain
+
+fuguectl experience recall code \
+  --query "dispatch route" \
+  --include-superseded \
   --explain
 
 fuguectl workspace context code \
@@ -269,13 +282,20 @@ fuguectl workspace context code \
 ```
 
 This follows the same direction as Agent Workflow Memory, AgentHER, MemRL, and
-recent agent-native memory, budget-tier routing, token-economics,
-store-routing, and provenance studies: do not replay every trace. FuguNano's
-current step is deliberately modest: select by workspace, source class, exact
-write-time source reference, trust mark, failure mode, retrieval evidence, utility
-threshold, freshness window, and an explicit recall cap; learned budget-tier
-routing, semantic conflict adjudication, and formal authority elevation are
-future work.
+recent agent-native memory, conflict-aware memory, deterministic
+freshness/conflict-resolution, budget-tier routing, token-economics,
+store-routing, and provenance studies: do not replay every trace, and do not ask
+the model to guess which conflicting memory is current. FuguNano's current step
+is deliberately modest: select by workspace, source class, exact write-time
+source reference, trust mark, explicit supersession, failure mode, retrieval
+evidence, utility threshold, freshness window, and an explicit recall cap;
+learned budget-tier routing, semantic conflict adjudication, and formal
+authority elevation are future work. The newest references in this direction
+are [MemConflict](https://arxiv.org/abs/2605.20926),
+[Don't Ask the LLM to Track Freshness](https://arxiv.org/abs/2606.01435),
+[Agent-Native Memory Systems](https://arxiv.org/abs/2606.24775),
+[Origin-Bound Memory Authority](https://arxiv.org/abs/2606.24322), and
+[From Untrusted Input to Trusted Memory](https://arxiv.org/abs/2606.04329).
 
 ## TypeScript Engine
 
@@ -310,9 +330,9 @@ fugue plan "<goal>" --harness fugue-cc|codex|opencode|agy|lite --out <dir> [--mo
 fugue task new|log|done
 fugue template <name> --dir <templates> [--set KEY=VALUE ...]
 fugue workspace list|show|model|context [context: --experience-source manual|task --experience-source-ref ref --experience-limit n --experience-trust trusted|all --experience-max-age-days n]
-fugue experience add|list|show --store <dir> [add: --trust trusted|untrusted --source-ref ref]
-fugue experience learn --store <dir> [--failure-cause cause]
-fugue experience recall --store <dir> [--failure-cause cause] [--source manual|task] [--source-ref ref] [--trust trusted|untrusted|all] [--min-score n] [--max-age-days n] [--explain]
+fugue experience add|list|show --store <dir> [add: --trust trusted|untrusted --source-ref ref --supersedes slug]
+fugue experience learn --store <dir> [--failure-cause cause] [--supersedes slug]
+fugue experience recall --store <dir> [--failure-cause cause] [--source manual|task] [--source-ref ref] [--trust trusted|untrusted|all] [--min-score n] [--max-age-days n] [--include-superseded] [--explain]
 fugue summary <round> --cache <dir> [--task <file>]
 fugue runtime check [--strict] --state <dir> [--skill <installed SKILL.md>] [--alias-skill <legacy SKILL.md>] [--repo-skill <repo SKILL.md>]
 fugue runtime adapt --state <dir> [--skill <installed SKILL.md>] [--alias-skill <legacy SKILL.md>] [--repo-skill <repo SKILL.md>]
