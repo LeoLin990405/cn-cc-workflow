@@ -210,6 +210,9 @@ describe('fugue CLI', () => {
       expect(taskLog).toContain('smoke → codex [gpt-5.5] (status=started');
       expect(taskLog).toContain('smoke → opencode [opencode/deepseek-v4-flash-free]');
       expect(taskLog).toContain('smoke → agy [default] (status=ok rc=0');
+      expect(taskLog).toContain(
+        `smoke summary (status=ok passed=3 failed=0 out=${join(outDir, 'summary.json')})`,
+      );
     });
 
     it('returns nonzero when a smoke output has extra whitespace beyond one final newline', async () => {
@@ -251,7 +254,11 @@ describe('fugue CLI', () => {
         artifactPath: join(outDir, 'agy.txt'),
       });
       expect(summary.results[0]?.detail).toContain('expected FUGUNANO_AGY_SMOKE_OK');
-      expect(await readFile(task, 'utf8')).toContain('error=output-mismatch');
+      const taskLog = await readFile(task, 'utf8');
+      expect(taskLog).toContain('error=output-mismatch');
+      expect(taskLog).toContain(
+        `smoke summary (status=failed passed=0 failed=1 out=${join(outDir, 'summary.json')})`,
+      );
     });
   });
 

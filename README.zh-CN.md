@@ -159,14 +159,14 @@ stdout 或 durable artifact。`task new` 使用独占创建避免并发 operator
 
 `orchestration/fuguectl/fuguectl` 是生产操作入口。当前有 24 个子命令和 25 套测试。
 
-| 区域                   | 命令                                                                                                                                                                                                                                                                                          |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Setup and recon        | `fuguectl doctor`、`fuguectl init --dry-run\|--write`、`fuguectl version`、`fuguectl preflight --harness fugue-cc\|codex\|opencode\|agy\|lite\|all`、`fuguectl smoke`、`fuguectl fleet status\|up\|down`                                                                                      |
+| 区域                   | 命令                                                                                                                                                                                                                                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Setup and recon        | `fuguectl doctor`、`fuguectl init --dry-run\|--write`、`fuguectl version`、`fuguectl preflight --harness fugue-cc\|codex\|opencode\|agy\|lite\|all`、`fuguectl smoke`、`fuguectl fleet status\|up\|down`                                                                                                      |
 | Planning               | `fuguectl task new\|log\|done`、`fuguectl template <name>`、`fuguectl plan "<goal>" [--harness h\|lite] [--models a,b] [--out <dir>] [--timeout-ms n] [--allow-partial] [--codex-clean] [--harness-arg x] [--codex-arg x] [--opencode-arg x] [--agy-arg x] [--task f]`、`fuguectl goal template\|show\|check` |
-| Routing and context    | `fuguectl allocate <type>`、`fuguectl workspace list\|show\|model\|context`、`fuguectl agents template\|validate\|list\|resolve`、`fuguectl skills index\|list\|match\|show\|inject\|validate\|forge`                                                                                         |
-| Dispatch and gather    | `fuguectl dispatch <target>`、`fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                                                                                                                                                      |
-| Integration and loop   | `fuguectl integrate --work <repo>`、`fuguectl loop init\|record\|decide\|status`、`fuguectl run set\|round\|status\|next\|clear`、`fuguectl summary <round>`                                                                                                                                  |
-| Memory and maintenance | `fuguectl experience add\|list\|recall\|show`、`fuguectl self-harness template\|run`、`fuguectl runtime check\|adapt`（provider + 已安装 workflow bundle 漂移）、`fuguectl selftest`                                                                                                          |
+| Routing and context    | `fuguectl allocate <type>`、`fuguectl workspace list\|show\|model\|context`、`fuguectl agents template\|validate\|list\|resolve`、`fuguectl skills index\|list\|match\|show\|inject\|validate\|forge`                                                                                                         |
+| Dispatch and gather    | `fuguectl dispatch <target>`、`fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                                                                                                                                                                      |
+| Integration and loop   | `fuguectl integrate --work <repo>`、`fuguectl loop init\|record\|decide\|status`、`fuguectl run set\|round\|status\|next\|clear`、`fuguectl summary <round>`                                                                                                                                                  |
+| Memory and maintenance | `fuguectl experience add\|list\|recall\|show`、`fuguectl self-harness template\|run`、`fuguectl runtime check\|adapt`（provider + 已安装 workflow bundle 漂移）、`fuguectl selftest`                                                                                                                          |
 
 ## TypeScript Engine
 
@@ -216,7 +216,8 @@ fuguectl smoke --harness all --codex-clean --timeout-ms 120000 --task TASK.md --
 ```
 
 设置 `--out-dir` 时，smoke 会写每个 harness 的 transcript，并额外写入
-`summary.json`，里面包含每个 lite runtime 的状态、耗时、输出长度和 artifact 路径，方便 CI 或后续循环直接解析。
+`summary.json`，里面包含每个 lite runtime 的状态、耗时、输出长度和 artifact 路径，方便 CI 或后续循环直接解析。带
+`--task` 时，任务审计里也会记录最终 summary 路径和 pass/fail 计数。
 
 OpenCode 场景下，`preflight --target <provider/model>` 会先检查本机
 `opencode models` registry，过期或不可用的模型会在 dispatch 前被拦住。

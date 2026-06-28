@@ -132,6 +132,11 @@ export class SmokeCommand extends Command {
     const failed = results.length - passed;
     const summaryPath = await this.writeSummary(selection, results);
     if (summaryPath !== undefined) {
+      await this.appendTaskLine(
+        `smoke summary (status=${failed === 0 ? 'ok' : 'failed'} passed=${String(
+          passed,
+        )} failed=${String(failed)} out=${summaryPath})`,
+      );
       this.context.stdout.write(`  → smoke summary written to ${summaryPath}\n`);
     }
     this.context.stdout.write(
