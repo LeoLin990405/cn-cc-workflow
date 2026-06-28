@@ -104,6 +104,23 @@ interface PlanSummary {
   readonly results: readonly PlanSummaryEntry[];
 }
 
+const formatPlanResultLine = (entry: PlanRunResult): string => {
+  const duration = ` (took ${formatDurationMs(entry.elapsedMs)})`;
+  if (!isOk(entry.result) && entry.artifact === 'missing') {
+    return `  ✗ ${entry.label} dispatch failed${duration}`;
+  }
+  if (!isOk(entry.result)) {
+    return `  ✗ ${entry.label} dispatch failed but left ${entry.artifact} artifact at ${entry.outfile}${duration}`;
+  }
+  if (entry.artifact === 'written') {
+    return `  → dispatched to ${entry.label}, plan written to ${entry.outfile}${duration}`;
+  }
+  if (entry.artifact === 'captured') {
+    return `  → dispatched to ${entry.label}, captured stdout to ${entry.outfile}${duration}`;
+  }
+  return `  ✗ ${entry.label} produced no plan artifact at ${entry.outfile}${duration}`;
+};
+
 const isHarnessName = (value: string): value is HarnessName =>
   (HARNESS_NAMES as readonly string[]).includes(value);
 
@@ -263,7 +280,13 @@ export class PlanCommand extends Command {
     }
     await mkdir(outDir, { recursive: true });
 
+    this.context.stdout.write(
+      `── planning panel: goal decomposition (${this.harness}) → ${requests
+        .map((request) => request.label)
+        .join(' ')} ──\n`,
+    );
     for (const request of requests) {
+      this.context.stdout.write(`  … ${request.label} started\n`);
       await this.appendTaskLog(
         `plan → ${request.agent} [${request.harness}] (status=started out=${request.outfile})`,
       );
@@ -294,33 +317,11 @@ export class PlanCommand extends Command {
             elapsedMs,
           )} ${detail} out=${outfile})`,
         );
-        return { harness: harnessName, agent, label, outfile, result, artifact, elapsedMs };
+        const entry = { harness: harnessName, agent, label, outfile, result, artifact, elapsedMs };
+        this.context.stdout.write(`${formatPlanResultLine(entry)}\n`);
+        return entry;
       }),
     );
-
-    const lines = [
-      `── planning panel: goal decomposition (${this.harness}) → ${requests
-        .map((request) => request.label)
-        .join(' ')} ──`,
-    ];
-    for (const entry of results) {
-      const duration = ` (took ${formatDurationMs(entry.elapsedMs)})`;
-      if (!isOk(entry.result) && entry.artifact === 'missing') {
-        lines.push(`  ✗ ${entry.label} dispatch failed${duration}`);
-      } else if (!isOk(entry.result)) {
-        lines.push(
-          `  ✗ ${entry.label} dispatch failed but left ${entry.artifact} artifact at ${entry.outfile}${duration}`,
-        );
-      } else if (entry.artifact === 'written') {
-        lines.push(`  → dispatched to ${entry.label}, plan written to ${entry.outfile}${duration}`);
-      } else if (entry.artifact === 'captured') {
-        lines.push(
-          `  → dispatched to ${entry.label}, captured stdout to ${entry.outfile}${duration}`,
-        );
-      } else {
-        lines.push(`  ✗ ${entry.label} produced no plan artifact at ${entry.outfile}${duration}`);
-      }
-    }
 
     const summary = await this.writeSummary(results);
     await this.appendTaskLog(
@@ -336,6 +337,7 @@ export class PlanCommand extends Command {
       (entry) => isOk(entry.result) && entry.artifact !== 'missing',
     );
     const partialAccepted = this.allowPartial && successfulArtifacts.length > 0;
+    const lines: string[] = [];
     if (availableArtifacts.length > 0) {
       lines.push(
         '',

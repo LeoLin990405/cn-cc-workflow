@@ -2208,6 +2208,8 @@ describe('fugue CLI', () => {
       expect(planned.code).toBe(0);
       expect(called).toContain('cc-a');
       expect(called).toContain('cc-b');
+      expect(planned.out).toContain('cc-a started');
+      expect(planned.out).toContain('cc-b started');
       expect(planned.out).toContain('cc-a.plan.md');
       expect(planned.out).toContain('captured stdout to');
       expect(planned.out).toContain('successful plan artifacts available for synthesis');
