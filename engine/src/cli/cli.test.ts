@@ -638,6 +638,86 @@ describe('fugue CLI', () => {
     });
   });
 
+  describe('review packet command', () => {
+    let dir: string;
+
+    beforeEach(async () => {
+      dir = await mkdtemp(join(tmpdir(), 'fugue-review-'));
+    });
+
+    afterEach(async () => {
+      await rm(dir, { recursive: true, force: true });
+    });
+
+    it('renders review packets from files as markdown and JSON', async () => {
+      const file = join(dir, 'review.txt');
+      const content = [
+        'VERDICT: NEEDS FIX',
+        '- [P1] engine/src/cli/commands/review.ts:12 loses review evidence.',
+        '- [P2] README.md:225 needs a documented regression test.',
+      ].join('\n');
+      await writeFile(file, content, 'utf8');
+
+      const markdown = await run(['review', 'packet', file]);
+      const json = await run(['review', 'packet', file, '--json']);
+      const packet = JSON.parse(json.out) as {
+        readonly verdict: string;
+        readonly sourceSha256: string;
+        readonly findings: readonly {
+          readonly rubric: string;
+          readonly evidence: readonly unknown[];
+        }[];
+      };
+
+      expect(markdown.code).toBe(0);
+      expect(markdown.out).toContain('[review:packet] verdict=NEEDS_FIX findings=2');
+      expect(markdown.out).toContain(
+        'F1 [major/traceability] engine/src/cli/commands/review.ts:12',
+      );
+      expect(markdown.out).toContain('check: run npm run check');
+      expect(markdown.out).toContain('F2 [minor/tests] README.md:225');
+      expect(json.code).toBe(0);
+      expect(packet.verdict).toBe('NEEDS_FIX');
+      expect(packet.sourceSha256).toBe(createHash('sha256').update(content).digest('hex'));
+      expect(packet.findings[0]?.evidence).toHaveLength(1);
+      expect(packet.findings[1]?.rubric).toBe('tests');
+    });
+
+    it('reads review text from stdin and supports explicit source refs', async () => {
+      const stdin = Readable.from(['VERDICT: ACCEPTED\nNo findings after re-review.\n']);
+
+      const result = await run(
+        ['review', 'packet', '-', '--json', '--source-ref', '/tmp/codex-review.txt'],
+        { stdin },
+      );
+      const packet = JSON.parse(result.out) as {
+        readonly verdict: string;
+        readonly sourceRef: string;
+        readonly findingCount: number;
+      };
+
+      expect(result.code).toBe(0);
+      expect(packet).toMatchObject({
+        verdict: 'ACCEPTED',
+        sourceRef: '/tmp/codex-review.txt',
+        findingCount: 0,
+      });
+    });
+
+    it('rejects missing and empty review inputs', async () => {
+      const empty = join(dir, 'empty.txt');
+      await writeFile(empty, '   \n', 'utf8');
+
+      const missing = await run(['review', 'packet', join(dir, 'missing.txt')]);
+      const blank = await run(['review', 'packet', empty]);
+
+      expect(missing.code).toBe(1);
+      expect(missing.err).toContain('no review file');
+      expect(blank.code).toBe(1);
+      expect(blank.err).toContain('review input is empty');
+    });
+  });
+
   describe('template rendering', () => {
     let dir: string;
     beforeEach(async () => {

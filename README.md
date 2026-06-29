@@ -9,8 +9,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Runtime-Node%20%E2%89%A518.18-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js >= 18.18" />
   <img src="https://img.shields.io/badge/Engine-TypeScript-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript engine" />
-  <img src="https://img.shields.io/badge/fuguectl-25%20suites-7c3aed?style=for-the-badge" alt="25 fuguectl test suites" />
-  <img src="https://img.shields.io/badge/assertions-355-brightgreen?style=for-the-badge" alt="355 fuguectl assertions" />
+  <img src="https://img.shields.io/badge/fuguectl-26%20suites-7c3aed?style=for-the-badge" alt="26 fuguectl test suites" />
+  <img src="https://img.shields.io/badge/assertions-360-brightgreen?style=for-the-badge" alt="360 fuguectl assertions" />
   <a href="https://github.com/BicaMindLabs/FuguNano/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/BicaMindLabs/FuguNano/ci.yml?branch=main&style=for-the-badge&label=CI" alt="CI status" /></a>
   <img src="https://img.shields.io/badge/license-Apache--2.0-yellowgreen?style=for-the-badge" alt="Apache-2.0 license" />
 </p>
@@ -50,6 +50,8 @@
   selected skills, and optional ownership enforcement.
 - **Review stays independent** - implementers write, while Codex or another
   configured independent reviewer returns `ACCEPTED` or `NEEDS FIX`.
+- **Structured review packets** - reviewer text can be parsed into
+  provenance-bearing findings, rubrics, evidence anchors, and follow-up checks.
 - **No lost outputs** - dispatch can persist reviewer/agent output with `--out`,
   and the join barrier still enforces N sent, N returned.
 - **Bounded repair** - keep-best, confirmation passes, user escalation, and
@@ -185,16 +187,16 @@ so final status updates do not clobber concurrent audit lines.
 ## Command Surface
 
 `orchestration/fuguectl/fuguectl` is the production operator entry point. It has
-24 subcommands and 25 test suites.
+25 subcommands and 26 test suites.
 
-| Area                   | Commands                                                                                                                                                                                                                                                                                                               |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Setup and recon        | `fuguectl doctor`, `fuguectl init --dry-run\|--write`, `fuguectl version`, `fuguectl preflight --harness fugue-cc\|codex\|opencode\|agy\|lite\|all`, `fuguectl smoke`, `fuguectl fleet status\|up\|down`                                                                                                               |
+| Area                   | Commands                                                                                                                                                                                                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Setup and recon        | `fuguectl doctor`, `fuguectl init --dry-run\|--write`, `fuguectl version`, `fuguectl preflight --harness fugue-cc\|codex\|opencode\|agy\|lite\|all`, `fuguectl smoke`, `fuguectl fleet status\|up\|down`                                                                                                                       |
 | Planning               | `fuguectl task new\|log\|done\|handoff\|digest`, `fuguectl template <name>`, `fuguectl plan "<goal>" [--harness h\|lite] [--models a,b] [--out <dir>] [--timeout-ms n] [--allow-partial] [--codex-clean] [--harness-arg x] [--codex-arg x] [--opencode-arg x] [--agy-arg x] [--task f]`, `fuguectl goal template\|show\|check` |
-| Routing and context    | `fuguectl allocate <type>`, `fuguectl workspace list\|show\|model\|context`, `fuguectl agents template\|validate\|list\|resolve`, `fuguectl skills index\|list\|match\|show\|inject\|validate\|forge`                                                                                                                  |
-| Dispatch and gather    | `fuguectl dispatch <target> [--certificate <file>]`, `fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                                                                                                                                                         |
-| Integration and loop   | `fuguectl integrate --work <repo>`, `fuguectl loop init\|record\|decide\|status`, `fuguectl run set\|round\|status\|next\|clear`, `fuguectl summary <round>`                                                                                                                                                           |
-| Memory and maintenance | `fuguectl experience add\|audit\|eval\|learn\|list\|policy\|promote\|recall\|show`, `fuguectl self-harness template\|run`, `fuguectl runtime check\|adapt` (provider + installed workflow bundle drift), `fuguectl selftest`                                                                                           |
+| Routing and context    | `fuguectl allocate <type>`, `fuguectl workspace list\|show\|model\|context`, `fuguectl agents template\|validate\|list\|resolve`, `fuguectl skills index\|list\|match\|show\|inject\|validate\|forge`                                                                                                                          |
+| Dispatch and gather    | `fuguectl dispatch <target> [--certificate <file>]`, `fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                                                                                                                                                                |
+| Integration and loop   | `fuguectl integrate --work <repo>`, `fuguectl review packet <file\|->`, `fuguectl loop init\|record\|decide\|status`, `fuguectl run set\|round\|status\|next\|clear`, `fuguectl summary <round>`                                                                                                                               |
+| Memory and maintenance | `fuguectl experience add\|audit\|eval\|learn\|list\|policy\|promote\|recall\|show`, `fuguectl self-harness template\|run`, `fuguectl runtime check\|adapt` (provider + installed workflow bundle drift), `fuguectl selftest`                                                                                                   |
 
 ## Task Handoff Packets
 
@@ -236,6 +238,29 @@ fuguectl task digest ~/.claude/tasks/TASK-2026-06-29-028.md --json
 This is not an LLM summary. It selects whole context units in a stable priority
 order and records how many units/chars were omitted. Use it when an implementer,
 reviewer, or planner needs "what matters now" without replaying the whole trace.
+
+## Review Packets
+
+c-CRAB frames useful code review as feedback that can drive objective repair and
+validation, while rubric-guided verification work argues that feedback should be
+classified, localized, and short enough to reuse. `review packet` is
+FuguNano's deterministic bridge from free-form reviewer output to a
+review-fix artifact. It parses `VERDICT: ACCEPTED` / `VERDICT: NEEDS FIX`,
+extracts file/line evidence, classifies findings into local rubrics such as
+`correctness`, `tests`, `security`, `integration`, and `traceability`, and
+emits recommended follow-up checks without calling another model.
+
+```bash
+fuguectl review packet /tmp/codex-review.txt
+fuguectl review packet /tmp/codex-review.txt --json
+cat /tmp/codex-review.txt | fuguectl review packet - --source-ref /tmp/codex-review.txt
+```
+
+Packets keep `sourceRef`, `sourceSha256`, and `sourceChars`, and flag review
+quality issues such as missing verdicts or findings without file evidence. Use
+them after an independent review and before the bounded review-fix loop, so the
+fixer has a compact checklist and the TASK audit can retain machine-readable
+review provenance.
 
 ## Dispatch Action Certificates
 
@@ -489,6 +514,7 @@ fugue preflight [--harness fugue-cc|codex|opencode|agy|lite|all] [--model provid
 fugue cache init|put|fail|status|barrier|collect|list|resume --cache <dir>
 fugue plan "<goal>" --harness fugue-cc|codex|opencode|agy|lite --out <dir> [--models m1,m2] [--timeout-ms n] [--allow-partial] [--codex-clean] [--harness-arg x] [--codex-arg x] [--opencode-arg x] [--agy-arg x] [--task <file>]
 fugue task new|log|done|handoff|digest [handoff: --json --tail n --require-done] [digest: --json --tail n --budget-chars n]
+fugue review packet <review-file|-> [--json] [--source-ref ref]
 fugue template <name> --dir <templates> [--set KEY=VALUE ...]
 fugue workspace list|show|model|context [context: --experience-source manual|task --experience-source-ref ref --experience-limit n --experience-budget-chars n --experience-trust trusted|all --experience-max-age-days n]
 fugue experience add|list|show --store <dir> [add: --trust trusted|untrusted --source-ref ref --supersedes slug]
@@ -641,6 +667,7 @@ GitHub Security Advisory.
 - [Proof-Carrying Agent Actions](https://arxiv.org/abs/2606.04104) for the runtime-neutral action certificate and checkpoint framing behind `dispatch --certificate`.
 - [Agentic Electronic Design Automation: A Handoff Perspective](https://arxiv.org/abs/2606.19795) and [HarnessFix](https://arxiv.org/abs/2606.06324) for the handoff-validity and trace-to-harness-flaw framing behind `task handoff` packets.
 - [Less Context, Better Agents](https://arxiv.org/abs/2606.10209), [Active Context Compression](https://arxiv.org/abs/2601.07190), [ContextBudget](https://arxiv.org/abs/2604.01664), and [AdaCoM](https://arxiv.org/abs/2605.30785) for the bounded, source-hashed context-card design behind `task digest`.
+- [Code Review Agent Benchmark](https://arxiv.org/abs/2603.23448), [DeepVerifier](https://arxiv.org/abs/2601.15808), and [From Agent Traces to Trust](https://arxiv.org/abs/2606.04990) for the review-as-verifiable-feedback, rubric-guided, and evidence-provenance framing behind `review packet`.
 - [Agent Workflow Memory](https://arxiv.org/abs/2409.07429), [AgentHER](https://arxiv.org/abs/2603.21357), [MemRL](https://arxiv.org/abs/2601.03192), [How Memory Management Impacts LLM Agents](https://arxiv.org/abs/2505.16067), [Agent-Native Memory Systems](https://arxiv.org/abs/2606.24775), [STALE](https://arxiv.org/abs/2605.06527), [Governing Evolving Memory in LLM Agents](https://arxiv.org/abs/2603.11768), [Agent Memory: Characterization and System Implications](https://arxiv.org/abs/2606.06448), [MemMachine](https://arxiv.org/abs/2604.04853), [RCR-Router](https://arxiv.org/abs/2508.04903), [BudgetMem](https://arxiv.org/abs/2602.06025), [Token Economics for LLM Agents](https://arxiv.org/abs/2605.09104), [Graph Memory for LLM Agents](https://arxiv.org/abs/2606.06036), [Externalization in LLM Agents](https://arxiv.org/abs/2604.08224), [Cost-Sensitive Store Routing](https://arxiv.org/abs/2603.15658), [Compute Allocation for Reasoning-Intensive Retrieval Agents](https://openreview.net/forum?id=nqr4eTODKl), and [RecoAtlas](https://arxiv.org/abs/2605.18805) for the stale-aware, cause-aware, provenance-visible, budgeted, explainable, utility-gated experience replay direction.
 - [Traversal-as-Policy](https://arxiv.org/abs/2603.05517), [From Agent Traces to Trust](https://arxiv.org/abs/2606.04990), [PROV-AGENT](https://arxiv.org/abs/2508.02866), [LLM Agents for Interactive Workflow Provenance](https://arxiv.org/abs/2509.13978), [Distilling Feedback into Memory-as-a-Tool](https://arxiv.org/abs/2601.05960), and [Structured Belief State](https://arxiv.org/abs/2605.11325) for the evidence-tracing, workflow-provenance, policy-card, and retrieval-precision framing behind provenance-bearing injected memory, `experience policy`, and `experience recall --json`.
 - [MemoryAgentBench](https://openreview.net/forum?id=DT7JyQC3MR) and [StructMemEval](https://arxiv.org/abs/2602.11243) for treating memory as a separately evaluated capability, which motivates `experience eval` cases over raw recall results.

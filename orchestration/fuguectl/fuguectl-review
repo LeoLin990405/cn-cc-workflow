@@ -1,0 +1,14 @@
+#!/usr/bin/env node
+import { runSubcommandBridge } from "./fuguectl-node-bridge.mjs";
+
+runSubcommandBridge({
+  argv: process.argv.slice(2),
+  command: "review",
+  allowed: ["packet"],
+  help: `fuguectl-review — TypeScript review commands bridge
+
+packet <review-file|-> [--json] [--source-ref ref]
+`,
+  unknown: (subcommand) =>
+    `fuguectl-review: unknown subcommand '${subcommand}' (packet)`,
+});

@@ -9,8 +9,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Runtime-Node%20%E2%89%A518.18-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js >= 18.18" />
   <img src="https://img.shields.io/badge/Engine-TypeScript-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript engine" />
-  <img src="https://img.shields.io/badge/fuguectl-25%20%E5%A5%97%E6%B5%8B%E8%AF%95-7c3aed?style=for-the-badge" alt="25 套 fuguectl 测试" />
-  <img src="https://img.shields.io/badge/assertions-355-brightgreen?style=for-the-badge" alt="355 个 fuguectl 断言" />
+  <img src="https://img.shields.io/badge/fuguectl-26%20%E5%A5%97%E6%B5%8B%E8%AF%95-7c3aed?style=for-the-badge" alt="26 套 fuguectl 测试" />
+  <img src="https://img.shields.io/badge/assertions-360-brightgreen?style=for-the-badge" alt="360 个 fuguectl 断言" />
   <a href="https://github.com/BicaMindLabs/FuguNano/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/BicaMindLabs/FuguNano/ci.yml?branch=main&style=for-the-badge&label=CI" alt="CI status" /></a>
   <img src="https://img.shields.io/badge/license-Apache--2.0-yellowgreen?style=for-the-badge" alt="Apache-2.0 license" />
 </p>
@@ -43,6 +43,7 @@
 - **可扩展模型池** - 现有 profile 只是起点。社区可以继续接入可用的商业、开源、私有、本地或自托管模型，而不改变 FuguNano 的核心协议。
 - **真实隔离** - worker 在独立 worktree 中编辑，配合 scoped workspace、按需 skills 和 ownership enforcement。
 - **审查保持独立** - implementer 写代码，Codex 或另一个配置好的独立 reviewer 给出 `ACCEPTED` / `NEEDS FIX`。
+- **结构化 Review Packet** - reviewer 文本可被解析成带 provenance 的 findings、rubric、evidence anchor 和后续检查项。
 - **输出不会丢** - dispatch 可用 `--out` 持久化 reviewer/agent 输出；join barrier 仍强制“派出 N 个，收回 N 个”。
 - **修复有边界** - keep-best、二次确认、询问用户、升级和非收敛状态避免无限循环。
 - **免训练学习** - allocation 用 benchmark prior 加 live review outcome 迭代路由；已完成和经人工重标注的失败 TASK trace 会沉淀成按任务、prompt 与失败原因选择回放的 experience memory。
@@ -157,16 +158,16 @@ stdout 或 durable artifact。`task new` 使用独占创建避免并发 operator
 
 ## 命令面
 
-`orchestration/fuguectl/fuguectl` 是生产操作入口。当前有 24 个子命令和 25 套测试。
+`orchestration/fuguectl/fuguectl` 是生产操作入口。当前有 25 个子命令和 26 套测试。
 
-| 区域                   | 命令                                                                                                                                                                                                                                                                                                                   |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Setup and recon        | `fuguectl doctor`、`fuguectl init --dry-run\|--write`、`fuguectl version`、`fuguectl preflight --harness fugue-cc\|codex\|opencode\|agy\|lite\|all`、`fuguectl smoke`、`fuguectl fleet status\|up\|down`                                                                                                               |
+| 区域                   | 命令                                                                                                                                                                                                                                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Setup and recon        | `fuguectl doctor`、`fuguectl init --dry-run\|--write`、`fuguectl version`、`fuguectl preflight --harness fugue-cc\|codex\|opencode\|agy\|lite\|all`、`fuguectl smoke`、`fuguectl fleet status\|up\|down`                                                                                                                       |
 | Planning               | `fuguectl task new\|log\|done\|handoff\|digest`、`fuguectl template <name>`、`fuguectl plan "<goal>" [--harness h\|lite] [--models a,b] [--out <dir>] [--timeout-ms n] [--allow-partial] [--codex-clean] [--harness-arg x] [--codex-arg x] [--opencode-arg x] [--agy-arg x] [--task f]`、`fuguectl goal template\|show\|check` |
-| Routing and context    | `fuguectl allocate <type>`、`fuguectl workspace list\|show\|model\|context`、`fuguectl agents template\|validate\|list\|resolve`、`fuguectl skills index\|list\|match\|show\|inject\|validate\|forge`                                                                                                                  |
-| Dispatch and gather    | `fuguectl dispatch <target> [--certificate <file>]`、`fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                                                                                                                                                         |
-| Integration and loop   | `fuguectl integrate --work <repo>`、`fuguectl loop init\|record\|decide\|status`、`fuguectl run set\|round\|status\|next\|clear`、`fuguectl summary <round>`                                                                                                                                                           |
-| Memory and maintenance | `fuguectl experience add\|audit\|eval\|learn\|list\|policy\|promote\|recall\|show`、`fuguectl self-harness template\|run`、`fuguectl runtime check\|adapt`（provider + 已安装 workflow bundle 漂移）、`fuguectl selftest`                                                                                              |
+| Routing and context    | `fuguectl allocate <type>`、`fuguectl workspace list\|show\|model\|context`、`fuguectl agents template\|validate\|list\|resolve`、`fuguectl skills index\|list\|match\|show\|inject\|validate\|forge`                                                                                                                          |
+| Dispatch and gather    | `fuguectl dispatch <target> [--certificate <file>]`、`fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                                                                                                                                                                |
+| Integration and loop   | `fuguectl integrate --work <repo>`、`fuguectl review packet <file\|->`、`fuguectl loop init\|record\|decide\|status`、`fuguectl run set\|round\|status\|next\|clear`、`fuguectl summary <round>`                                                                                                                               |
+| Memory and maintenance | `fuguectl experience add\|audit\|eval\|learn\|list\|policy\|promote\|recall\|show`、`fuguectl self-harness template\|run`、`fuguectl runtime check\|adapt`（provider + 已安装 workflow bundle 漂移）、`fuguectl selftest`                                                                                                      |
 
 ## TASK 交接包
 
@@ -195,6 +196,18 @@ fuguectl task digest ~/.claude/tasks/TASK-2026-06-29-028.md --json
 ```
 
 这不是 LLM 总结，也不会改写 TASK。它按稳定优先级选择完整 context unit，并记录省略了多少 unit/字符。适合在 implementer、reviewer 或 planner 需要“当前最重要的信息”时使用，而不是把整段 trace 重放进上下文。
+
+## Review Packet
+
+c-CRAB 把 code review 看成一种能驱动 objective repair / validation 的反馈；rubric-guided verification 的方向则强调反馈应该被分类、定位，而且要短到能反复回放。`review packet` 是 FuguNano 对这个方向的确定性工程切口：它把自由文本 reviewer 输出解析成 review-fix loop 可以直接消费的结构化包。命令会识别 `VERDICT: ACCEPTED` / `VERDICT: NEEDS FIX`，抽取 file/line evidence，把 finding 归入 `correctness`、`tests`、`security`、`integration`、`traceability` 等本地 rubric，并生成后续检查建议；整个过程不再调用模型。
+
+```bash
+fuguectl review packet /tmp/codex-review.txt
+fuguectl review packet /tmp/codex-review.txt --json
+cat /tmp/codex-review.txt | fuguectl review packet - --source-ref /tmp/codex-review.txt
+```
+
+packet 会保留 `sourceRef`、`sourceSha256` 和 `sourceChars`，并标出 review 自身的问题，例如缺少 verdict，或者 finding 没有 file evidence。它适合放在 independent review 之后、bounded review-fix loop 之前：fixer 看到的是一张紧凑 checklist，TASK audit 留下的是机器可读的 review provenance。
 
 ## Dispatch 动作证书
 
@@ -321,6 +334,7 @@ fugue preflight [--harness fugue-cc|codex|opencode|agy|lite|all] [--model provid
 fugue cache init|put|fail|status|barrier|collect|list|resume --cache <dir>
 fugue plan "<goal>" --harness fugue-cc|codex|opencode|agy|lite --out <dir> [--models m1,m2] [--timeout-ms n] [--allow-partial] [--codex-clean] [--harness-arg x] [--codex-arg x] [--opencode-arg x] [--agy-arg x] [--task <file>]
 fugue task new|log|done|handoff|digest [handoff: --json --tail n --require-done] [digest: --json --tail n --budget-chars n]
+fugue review packet <review-file|-> [--json] [--source-ref ref]
 fugue template <name> --dir <templates> [--set KEY=VALUE ...]
 fugue workspace list|show|model|context [context: --experience-source manual|task --experience-source-ref ref --experience-limit n --experience-budget-chars n --experience-trust trusted|all --experience-max-age-days n]
 fugue experience add|list|show --store <dir> [add: --trust trusted|untrusted --source-ref ref --supersedes slug]
@@ -450,6 +464,7 @@ npm run test:engine
 - [Proof-Carrying Agent Actions](https://arxiv.org/abs/2606.04104) 支撑了 `dispatch --certificate` 背后的 runtime-neutral action certificate 与 checkpoint 设计。
 - [Agentic Electronic Design Automation: A Handoff Perspective](https://arxiv.org/abs/2606.19795) 与 [HarnessFix](https://arxiv.org/abs/2606.06324) 支撑了 `task handoff` 交接包背后的 handoff validity 与 trace-to-harness-flaw 思路。
 - [Less Context, Better Agents](https://arxiv.org/abs/2606.10209)、[Active Context Compression](https://arxiv.org/abs/2601.07190)、[ContextBudget](https://arxiv.org/abs/2604.01664) 与 [AdaCoM](https://arxiv.org/abs/2605.30785) 支撑了 `task digest` 背后的有界、带 source hash 的上下文卡片设计。
+- [Code Review Agent Benchmark](https://arxiv.org/abs/2603.23448)、[DeepVerifier](https://arxiv.org/abs/2601.15808) 与 [From Agent Traces to Trust](https://arxiv.org/abs/2606.04990) 支撑了 `review packet` 背后的 review-as-verifiable-feedback、rubric-guided verification 和 evidence provenance 设计。
 - [Agent Workflow Memory](https://arxiv.org/abs/2409.07429)、[AgentHER](https://arxiv.org/abs/2603.21357)、[MemRL](https://arxiv.org/abs/2601.03192)、[How Memory Management Impacts LLM Agents](https://arxiv.org/abs/2505.16067)、[Agent-Native Memory Systems](https://arxiv.org/abs/2606.24775)、[STALE](https://arxiv.org/abs/2605.06527)、[Governing Evolving Memory in LLM Agents](https://arxiv.org/abs/2603.11768)、[Agent Memory: Characterization and System Implications](https://arxiv.org/abs/2606.06448)、[MemMachine](https://arxiv.org/abs/2604.04853)、[RCR-Router](https://arxiv.org/abs/2508.04903)、[BudgetMem](https://arxiv.org/abs/2602.06025)、[Token Economics for LLM Agents](https://arxiv.org/abs/2605.09104)、[Graph Memory for LLM Agents](https://arxiv.org/abs/2606.06036)、[Externalization in LLM Agents](https://arxiv.org/abs/2604.08224)、[Cost-Sensitive Store Routing](https://arxiv.org/abs/2603.15658)、[Compute Allocation for Reasoning-Intensive Retrieval Agents](https://openreview.net/forum?id=nqr4eTODKl) 和 [RecoAtlas](https://arxiv.org/abs/2605.18805) 启发了 stale-aware、按失败原因过滤、来源可见、预算可控、可解释、带效用门控的 experience replay。
 - [Traversal-as-Policy](https://arxiv.org/abs/2603.05517)、[From Agent Traces to Trust](https://arxiv.org/abs/2606.04990)、[PROV-AGENT](https://arxiv.org/abs/2508.02866)、[LLM Agents for Interactive Workflow Provenance](https://arxiv.org/abs/2509.13978)、[Distilling Feedback into Memory-as-a-Tool](https://arxiv.org/abs/2601.05960) 与 [Structured Belief State](https://arxiv.org/abs/2605.11325) 支撑了 provenance-bearing injected memory、`experience policy` 和 `experience recall --json` 背后的 evidence tracing、workflow provenance、policy card 与 retrieval precision 设计。
 - [MemoryAgentBench](https://openreview.net/forum?id=DT7JyQC3MR) 与 [StructMemEval](https://arxiv.org/abs/2602.11243) 把 memory 当作独立能力评估，支撑了 `experience eval` 这种直接跑 recall cases 的本地 benchmark。

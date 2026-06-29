@@ -91,6 +91,21 @@ export {
   taskContextDigest,
 } from './domain/task-context-digest.js';
 export type {
+  ReviewEvidence,
+  ReviewFinding,
+  ReviewFindingSeverity,
+  ReviewPacket,
+  ReviewPacketIssue,
+  ReviewPacketOptions,
+  ReviewRubric,
+  ReviewVerdict,
+} from './domain/review-packet.js';
+export {
+  REVIEW_PACKET_SCHEMA_VERSION,
+  renderReviewPacket,
+  reviewPacket,
+} from './domain/review-packet.js';
+export type {
   DispatchRequest,
   DispatchResult,
   DispatchError,
