@@ -401,7 +401,12 @@ export {
   type RunReport,
 } from './app/coordinator.js';
 export { wireCoordinator, type WireConfig } from './app/wire.js';
-export { wireSelfHarness, type WireSelfHarnessConfig } from './app/wire.js';
+export {
+  wireEvolution,
+  wireSelfHarness,
+  type WireEvolutionConfig,
+  type WireSelfHarnessConfig,
+} from './app/wire.js';
 
 // Self-Harness — engine-native harness evolution, inspired by Shanghai AI Lab's arXiv 2606.09498.
 export {
@@ -409,3 +414,18 @@ export {
   type SelfHarnessDeps,
   type RoundResult,
 } from './app/self-harness-loop.js';
+export {
+  deterministicEvolutionRubricEvaluator,
+  EvolutionLoop,
+  type EvolutionCandidate,
+  type EvolutionCandidateProposer,
+  type EvolutionCandidateResult,
+  type EvolutionDecision,
+  type EvolutionLineageWriter,
+  type EvolutionLineageWriterError,
+  type EvolutionLoopDeps,
+  type EvolutionLoopResult,
+  type EvolutionValidationCases,
+  type GuardRuleCase,
+  type GuardRuleSplitCases,
+} from './app/evolution-loop.js';

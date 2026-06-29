@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { BetaBernoulliAllocator } from '../adapters/allocation/beta-bernoulli-allocator.js';
 import { PersistentBarrier } from '../adapters/barrier/persistent-barrier.js';
+import { FsLineageStore } from '../adapters/evolution/fs-lineage-store.js';
 import { AgyHarness } from '../adapters/harness/agy-harness.js';
 import {
   AgentCliHarness,
@@ -29,6 +30,8 @@ import { NodeCommandRunner } from '../infra/node-command-runner.js';
 import { NodeFileSystem } from '../infra/node-file-system.js';
 import { systemRng } from '../infra/rng.js';
 import { Coordinator, type CoordinatorDeps } from './coordinator.js';
+import type { EvolutionCandidateProposer, EvolutionValidationCases } from './evolution-loop.js';
+import { EvolutionLoop } from './evolution-loop.js';
 import { SelfHarnessLoop } from './self-harness-loop.js';
 
 export interface WireConfig {
@@ -50,6 +53,15 @@ export interface WireSelfHarnessConfig {
   readonly spec: SelfHarnessSpec;
   readonly cwd?: string;
   readonly stateDir: string;
+}
+
+export interface WireEvolutionConfig {
+  readonly stateDir: string;
+  readonly proposer: EvolutionCandidateProposer;
+  readonly cases: EvolutionValidationCases;
+  readonly promotedBy?: 'operator' | 'self-harness' | 'evolve';
+  readonly k?: number;
+  readonly samples?: number;
 }
 
 const buildHarness = (
@@ -157,5 +169,17 @@ export const wireSelfHarness = (cfg: WireSelfHarnessConfig): SelfHarnessLoop => 
       ...(cfg.spec.samples !== undefined ? { samples: cfg.spec.samples } : {}),
     }),
     k: cfg.spec.k,
+  });
+};
+
+export const wireEvolution = (cfg: WireEvolutionConfig): EvolutionLoop => {
+  const fs = new NodeFileSystem();
+  return new EvolutionLoop({
+    proposer: cfg.proposer,
+    lineageStore: new FsLineageStore(fs, joinPath(cfg.stateDir, 'evolution')),
+    cases: cfg.cases,
+    promotedBy: cfg.promotedBy ?? 'operator',
+    k: cfg.k ?? 3,
+    ...(cfg.samples === undefined ? {} : { samples: cfg.samples }),
   });
 };
