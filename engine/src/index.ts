@@ -106,6 +106,29 @@ export {
   reviewPacket,
 } from './domain/review-packet.js';
 export type {
+  EvidenceRef,
+  EvolvableSurface,
+  EvolutionFitness,
+  EvolutionLineageEntry,
+  EvolutionPromoter,
+  EvolutionSplitFitness,
+  JsonScalar,
+  JsonValue,
+} from './domain/evolution-lineage.js';
+export {
+  SAFETY_SURFACES,
+  gatePromotion,
+  isSafetySurface,
+  parseEvolutionLineageEntry,
+  renderEvolutionLineageEntry,
+} from './domain/evolution-lineage.js';
+export type {
+  ReviewRubricCase,
+  ReviewRubricSplitCases,
+  RubricEvaluator,
+} from './domain/evolution-rubric.js';
+export { scoreRubric } from './domain/evolution-rubric.js';
+export type {
   IncidentEvidence,
   IncidentHarnessLayer,
   IncidentKind,
@@ -170,6 +193,17 @@ export {
   FAILURE_MODES,
   buildArgv,
 } from './domain/invocation-descriptor.js';
+export type { AgentCliId, AgentCliRegistryEntry } from './domain/agent-cli-registry.js';
+export {
+  AGENT_CLI_ENTRIES,
+  AGENT_CLI_IDS,
+  KIMI_CODE_INVOCATION_DESCRIPTOR,
+  MIMO_CODE_INVOCATION_DESCRIPTOR,
+  QWEN_CODE_INVOCATION_DESCRIPTOR,
+  agentCliEntries,
+  lookupAgentCliDescriptor,
+  lookupAgentCliEntry,
+} from './domain/agent-cli-registry.js';
 export type { Workspace } from './domain/workspace.js';
 export type { PromptBundle, AssembleInput } from './domain/prompt.js';
 export { assembleContext, renderBundle, renderTemplate } from './domain/prompt-render.js';
@@ -327,7 +361,10 @@ export { AgyHarness } from './adapters/harness/agy-harness.js';
 export {
   AgentCliHarness,
   CODEX_INVOCATION_DESCRIPTOR,
-  QWEN_CODE_INVOCATION_DESCRIPTOR,
+} from './adapters/harness/agent-cli-harness.js';
+export type {
+  AgentCliRegistrySource,
+  AgentCliSource,
 } from './adapters/harness/agent-cli-harness.js';
 export type { HarnessExecOptions } from './adapters/harness/exec-helpers.js';
 export {
