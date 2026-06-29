@@ -293,7 +293,10 @@ export class LoopCommand extends Command {
    */
   private async augmentWithReview(
     args: readonly string[],
-  ): Promise<{ readonly ok: true; readonly args: readonly string[] } | { readonly ok: false; readonly message: string }> {
+  ): Promise<
+    | { readonly ok: true; readonly args: readonly string[] }
+    | { readonly ok: false; readonly message: string }
+  > {
     const reviewIndex = args.indexOf('--review');
     if (reviewIndex === -1) return { ok: true, args };
     const file = args[reviewIndex + 1];

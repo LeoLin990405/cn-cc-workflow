@@ -44,10 +44,7 @@ import { assembleContext, renderBundle, renderTemplate } from '../../domain/prom
 import { incidentPacket, incidentRecoveryPacket } from '../../domain/incident-packet.js';
 import { isOk } from '../../domain/result.js';
 import { renderRuntimeGuardPacket, runtimeGuardPacket } from '../../domain/runtime-guard.js';
-import {
-  renderTaskContextDigest,
-  taskContextDigest,
-} from '../../domain/task-context-digest.js';
+import { renderTaskContextDigest, taskContextDigest } from '../../domain/task-context-digest.js';
 import type { SkillSource } from '../../domain/skill.js';
 import { systemClock } from '../../infra/clock.js';
 import type { FileSystem } from '../../infra/file-system.js';
@@ -900,7 +897,10 @@ export class DispatchCommand extends Command {
       packet.findings.some((f) => f.kind === 'privileged-action-without-certificate');
     if (packet.disposition === 'allow' && !privilegedUncertified) return true;
     if (this.guard === 'strict' && (packet.disposition === 'block' || privilegedUncertified)) {
-      const reason = packet.disposition === 'block' ? 'disposition=block' : 'privileged-action-without-certificate';
+      const reason =
+        packet.disposition === 'block'
+          ? 'disposition=block'
+          : 'privileged-action-without-certificate';
       this.context.stderr.write(renderRuntimeGuardPacket(packet));
       this.context.stderr.write(
         `[guard] dispatch blocked (${reason}); add --certificate or rerun with --guard warn to override\n`,
