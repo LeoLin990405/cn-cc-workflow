@@ -9,8 +9,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Runtime-Node%20%3E%3D18.18-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js >= 18.18" />
   <img src="https://img.shields.io/badge/Engine-TypeScript-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript engine" />
-  <img src="https://img.shields.io/badge/fuguectl-28%20suites-7c3aed?style=for-the-badge" alt="28 fuguectl test suites" />
-  <img src="https://img.shields.io/badge/assertions-400-brightgreen?style=for-the-badge" alt="400 fuguectl assertions" />
+  <img src="https://img.shields.io/badge/fuguectl-29%20suites-7c3aed?style=for-the-badge" alt="29 fuguectl test suites" />
+  <img src="https://img.shields.io/badge/assertions-408-brightgreen?style=for-the-badge" alt="408 fuguectl assertions" />
   <a href="https://github.com/BicaMindLabs/FuguNano/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/BicaMindLabs/FuguNano/ci.yml?branch=main&style=for-the-badge&label=CI" alt="CI status" /></a>
   <img src="https://img.shields.io/badge/license-Apache--2.0-yellowgreen?style=for-the-badge" alt="Apache-2.0 license" />
 </p>
@@ -163,8 +163,8 @@ whether a learned conductor is worth the cost.
 
 ## Command Surface
 
-`orchestration/fuguectl/fuguectl` is the production entry point: 27 subcommands,
-28 test suites, and 400 wrapper assertions.
+`orchestration/fuguectl/fuguectl` is the production entry point: 28 subcommands,
+29 test suites, and 408 wrapper assertions.
 
 | Area               | Commands                                                                                                                                                                                                                                                                                                                     |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -173,7 +173,7 @@ whether a learned conductor is worth the cost.
 | Routing            | `fuguectl allocate <type>`, `fuguectl workspace list\|show\|model\|context`, `fuguectl agents template\|validate\|list\|resolve`, `fuguectl skills index\|list\|match\|show\|inject\|validate\|forge`                                                                                                                        |
 | Dispatch           | `fuguectl guard prompt <file\|->`, `fuguectl dispatch <target> [--certificate <file>]`, `fuguectl cache init\|put\|fail\|barrier\|collect\|resume`                                                                                                                                                                           |
 | Review + repair    | `fuguectl integrate --work <repo>`, `fuguectl review packet <file\|->`, `fuguectl incident packet\|recovery <file\|->`, `fuguectl loop init\|record\|decide\|status`, `fuguectl run set\|round\|status\|next\|clear`, `fuguectl summary <round>`                                                                             |
-| Memory + evolution | `fuguectl experience add\|audit\|eval\|learn\|list\|policy\|promote\|recall\|show`, `fuguectl self-harness template\|run`, `fuguectl runtime check\|adapt`, `fuguectl selftest`                                                                                                                                              |
+| Memory + evolution | `fuguectl experience add\|audit\|eval\|learn\|list\|policy\|promote\|recall\|show`, `fuguectl evolve mine\|validate\|promote\|history`, `fuguectl self-harness template\|run`, `fuguectl runtime check\|adapt`, `fuguectl selftest`                                                                                          |
 
 ## Evidence Packets
 
